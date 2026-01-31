@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { PointerLockControls } from "three/examples/jsm/controls/PointerLockControls";
+import { SceneLoader } from "./scene-loader";
 
 export interface GameKeys {
   w: boolean;
@@ -42,27 +43,10 @@ export class Game {
   }
 
   async load(onComplete: () => void) {
-    const loader = new THREE.TextureLoader();
+    const sceneLoader = new SceneLoader(this.scene, this.renderer);
 
-    // Gym floor
-    const floorUrl = getUrl("/textures/gym_floor.png");
-    const floorTexture = await loader.loadAsync(floorUrl);
-    floorTexture.colorSpace = THREE.SRGBColorSpace;
-    floorTexture.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
-    const floorWidth = 28;
-    const floorHeight = 15;
-    const floor = new THREE.Mesh(
-      new THREE.PlaneGeometry(floorWidth, floorHeight),
-      new THREE.MeshPhysicalMaterial({
-        map: floorTexture,
-        roughness: 0.45,
-        metalness: 0.0,
-      }),
-    );
-    floor.rotateX(-Math.PI / 2);
-    this.scene.add(floor);
+    await sceneLoader.loadScene();
 
-    // Done
     onComplete();
   }
 
@@ -90,6 +74,10 @@ export class Game {
 
     this.controls.moveForward(direction.z * this.moveSpeed * dt);
     this.controls.moveRight(direction.x * this.moveSpeed * dt);
+
+    const object = this.controls.object;
+    object.position.x = THREE.MathUtils.clamp(object.position.x, -13.5, 13.5);
+    object.position.z = THREE.MathUtils.clamp(object.position.z, -7, 7);
   }
 
   private setupLights() {
@@ -140,8 +128,4 @@ export class Game {
         break;
     }
   };
-}
-
-function getUrl(path: string) {
-  return new URL(path, import.meta.url).href;
 }
