@@ -40,55 +40,37 @@ export class SceneLoader {
   }
 
   private async setupWalls() {
-    const { whiteMaterial, blueMaterial } = await this.getWallMaterials();
+    const front = await this.buildWall(this.roomLength);
+    front.position.z = -this.roomWidth / 2;
 
-    // Direction are looking down -z
-    const frontWall = this.buildWall(
-      blueMaterial,
-      whiteMaterial,
-      this.roomLength,
-    );
-    frontWall.position.z -= this.roomWidth / 2;
+    const back = await this.buildWall(this.roomLength);
+    back.position.z = this.roomWidth / 2;
+    back.rotateY(Math.PI);
 
-    const backWall = this.buildWall(
-      blueMaterial,
-      whiteMaterial,
-      this.roomLength,
-    );
-    backWall.position.z += this.roomWidth / 2;
-    backWall.rotateY(Math.PI);
+    const left = await this.buildWall(this.roomWidth);
+    left.position.x = -this.roomLength / 2;
+    left.rotateY(Math.PI / 2);
 
-    const leftEnd = this.buildWall(blueMaterial, whiteMaterial, this.roomWidth);
-    leftEnd.position.x = -this.roomLength / 2;
-    leftEnd.rotateY(Math.PI / 2);
+    const right = await this.buildWall(this.roomWidth);
+    right.position.x = this.roomLength / 2;
+    right.rotateY(-Math.PI / 2);
 
-    const rightEnd = this.buildWall(
-      blueMaterial,
-      whiteMaterial,
-      this.roomWidth,
-    );
-    rightEnd.position.x = this.roomLength / 2;
-    rightEnd.rotateY(-Math.PI / 2);
-
-    this.scene.add(frontWall, backWall, leftEnd, rightEnd);
+    this.scene.add(front, back, left, right);
   }
 
-  private async getWallMaterials() {
-    const wallRepeat = new THREE.Vector2(
-      this.roomLength / 2,
-      this.wallHeight / 4,
-    );
-
+  private async buildWall(length: number) {
+    // Get new textures because repeat differs per side/end wall
     const whiteTexture = await this.loadTexture("/textures/wall_white.png");
     const blueTexture = await this.loadTexture("/textures/wall_blue.png");
     const normal = await this.loadTexture("/textures/wall_normal.png");
 
-    whiteTexture.repeat.copy(wallRepeat);
-    blueTexture.repeat.copy(wallRepeat);
-    normal.repeat.copy(wallRepeat);
+    const repeat = new THREE.Vector2(length / 2, this.wallHeight / 4); // 2 rows so divide by 4
+    whiteTexture.repeat.copy(repeat);
+    blueTexture.repeat.copy(repeat);
+    normal.repeat.copy(repeat);
 
+    // Create materials
     const normalScale = new THREE.Vector2(1.8, 1.8);
-
     const whiteMaterial = new THREE.MeshPhysicalMaterial({
       map: whiteTexture,
       normalMap: normal,
@@ -105,14 +87,6 @@ export class SceneLoader {
       metalness: 0.0,
     });
 
-    return { whiteMaterial, blueMaterial };
-  }
-
-  private buildWall(
-    blueMaterial: THREE.MeshPhysicalMaterial,
-    whiteMaterial: THREE.MeshPhysicalMaterial,
-    length: number,
-  ) {
     const wall = new THREE.Group();
 
     const bluePart = new THREE.Mesh(
