@@ -45,22 +45,24 @@ export class Game {
     const loader = new THREE.TextureLoader();
 
     // Gym floor
-    const gymFloorUrl = getUrl("/textures/gym_floor.png");
-    const gymFloorTexture = await loader.loadAsync(gymFloorUrl);
-    gymFloorTexture.colorSpace = THREE.SRGBColorSpace;
-    gymFloorTexture.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
-
-    const gymFloor = new THREE.Mesh(
-      new THREE.PlaneGeometry(28, 15),
+    const floorUrl = getUrl("/textures/gym_floor.png");
+    const floorTexture = await loader.loadAsync(floorUrl);
+    floorTexture.colorSpace = THREE.SRGBColorSpace;
+    floorTexture.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+    const floorWidth = 28;
+    const floorHeight = 15;
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(floorWidth, floorHeight),
       new THREE.MeshPhysicalMaterial({
-        map: gymFloorTexture,
+        map: floorTexture,
         roughness: 0.45,
         metalness: 0.0,
       }),
     );
-    gymFloor.rotateX(-Math.PI / 2);
-    this.scene.add(gymFloor);
+    floor.rotateX(-Math.PI / 2);
+    this.scene.add(floor);
 
+    // Done
     onComplete();
   }
 
