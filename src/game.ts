@@ -81,7 +81,7 @@ export class Game {
   }
 
   private setupLights() {
-    const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x888888, 0.6);
     this.scene.add(hemi);
 
     const sun = new THREE.DirectionalLight(0xffffff, 1.2);
@@ -90,8 +90,8 @@ export class Game {
     this.scene.add(sun);
 
     const addPanelLight = (x: number, z: number) => {
-      const light = new THREE.RectAreaLight(0xffffff, 8, 6, 1);
-      light.position.set(x, 8, z);
+      const light = new THREE.RectAreaLight(0xffffff, 8, 4, 1.2);
+      light.position.set(x, 7.9, z);
       light.rotation.x = -Math.PI / 2;
       this.scene.add(light);
     };
