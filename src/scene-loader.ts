@@ -14,7 +14,7 @@ export class SceneLoader {
 
   async loadScene() {
     await this.setupFloor();
-    await this.doWalls();
+    await this.setupWalls();
   }
 
   private async setupFloor() {
@@ -37,59 +37,6 @@ export class SceneLoader {
   }
 
   private async setupWalls() {
-    const wallRepeat = new THREE.Vector2(
-      this.roomLength / 2,
-      this.roomWidth / 2,
-    );
-
-    const cinderTexture = await this.loadTexture("/textures/wall_white.png");
-    cinderTexture.wrapS = THREE.RepeatWrapping;
-    cinderTexture.wrapT = THREE.RepeatWrapping;
-    cinderTexture.repeat.copy(wallRepeat);
-
-    const cinderNormal = await this.loadTexture("/textures/wall_normal.png");
-    cinderNormal.repeat.copy(wallRepeat);
-
-    const wallMaterial = new THREE.MeshPhysicalMaterial({
-      map: cinderTexture,
-      normalMap: cinderNormal,
-      roughness: 0.85,
-      metalness: 0.0,
-    });
-
-    const wallHeight = 8;
-    const longWallGeometry = new THREE.PlaneGeometry(
-      this.roomLength,
-      wallHeight,
-    );
-
-    const frontWall = new THREE.Mesh(longWallGeometry, wallMaterial);
-    frontWall.position.y = wallHeight / 2;
-    frontWall.position.z = -this.roomWidth / 2;
-
-    const backWall = new THREE.Mesh(longWallGeometry, wallMaterial);
-    backWall.position.y = wallHeight / 2;
-    backWall.position.z = this.roomWidth / 2;
-    backWall.rotateY(Math.PI);
-
-    const shortWallGeometry = new THREE.PlaneGeometry(
-      this.roomWidth,
-      wallHeight,
-    );
-
-    const leftWall = new THREE.Mesh(shortWallGeometry, wallMaterial);
-    leftWall.position.y = wallHeight / 2;
-    leftWall.position.x = -this.roomLength / 2;
-    leftWall.rotateY(Math.PI / 2);
-
-    const rightWall = new THREE.Mesh(shortWallGeometry, wallMaterial);
-    rightWall.position.set(this.roomLength / 2, wallHeight / 2, 0);
-    rightWall.rotateY(-Math.PI / 2);
-
-    this.scene.add(backWall, frontWall, leftWall, rightWall);
-  }
-
-  private async doWalls() {
     const { whiteMaterial, blueMaterial } = await this.getWallMaterials();
 
     // Direction are looking down -z
@@ -137,9 +84,12 @@ export class SceneLoader {
     blueTexture.repeat.copy(wallRepeat);
     normal.repeat.copy(wallRepeat);
 
+    const normalScale = new THREE.Vector2(1.8, 1.8);
+
     const whiteMaterial = new THREE.MeshPhysicalMaterial({
       map: whiteTexture,
       normalMap: normal,
+      normalScale,
       roughness: 0.85,
       metalness: 0.0,
     });
@@ -147,6 +97,7 @@ export class SceneLoader {
     const blueMaterial = new THREE.MeshPhysicalMaterial({
       map: blueTexture,
       normalMap: normal,
+      normalScale,
       roughness: 0.85,
       metalness: 0.0,
     });
@@ -189,10 +140,10 @@ export class SceneLoader {
 
     texture.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
 
-    const t = texture;
-    console.log("for texture: ", path);
-    console.log("map size:", t.image.width, t.image.height);
-    console.log("wrapS/wrapT:", t.wrapS, t.wrapT); // should be 1000 / 1000
+    // const t = texture;
+    // console.log("for texture: ", path);
+    // console.log("map size:", t.image.width, t.image.height);
+    // console.log("wrapS/wrapT:", t.wrapS, t.wrapT); // should be 1000 / 1000
 
     texture.needsUpdate = true;
 

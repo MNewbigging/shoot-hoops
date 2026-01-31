@@ -81,12 +81,25 @@ export class Game {
   }
 
   private setupLights() {
-    const ambientLight = new THREE.AmbientLight(undefined, 1);
-    this.scene.add(ambientLight);
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+    this.scene.add(hemi);
 
-    const directLight = new THREE.DirectionalLight(undefined, Math.PI);
-    directLight.position.copy(new THREE.Vector3(0.75, 1, 0.75).normalize());
-    this.scene.add(directLight);
+    const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+    sun.position.set(0, 12, 0);
+    sun.target.position.set(0, 0, 0);
+    this.scene.add(sun);
+
+    const addPanelLight = (x: number, z: number) => {
+      const light = new THREE.RectAreaLight(0xffffff, 8, 6, 1);
+      light.position.set(x, 8, z);
+      light.rotation.x = -Math.PI / 2;
+      this.scene.add(light);
+    };
+
+    addPanelLight(-6, -4);
+    addPanelLight(6, -4);
+    addPanelLight(-6, 4);
+    addPanelLight(6, 4);
   }
 
   private onCanvasResize = () => {
