@@ -88,18 +88,6 @@ export class Game {
     sun.position.set(0, 12, 0);
     sun.target.position.set(0, 0, 0);
     this.scene.add(sun);
-
-    const addPanelLight = (x: number, z: number) => {
-      const light = new THREE.RectAreaLight(0xffffff, 8, 4, 1.2);
-      light.position.set(x, 7.9, z);
-      light.rotation.x = -Math.PI / 2;
-      this.scene.add(light);
-    };
-
-    addPanelLight(-6, -4);
-    addPanelLight(6, -4);
-    addPanelLight(-6, 4);
-    addPanelLight(6, 4);
   }
 
   private onCanvasResize = () => {

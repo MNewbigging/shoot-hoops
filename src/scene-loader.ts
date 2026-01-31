@@ -1,5 +1,7 @@
 import * as THREE from "three";
 
+import { RectAreaLightHelper } from "three/examples/jsm/helpers/RectAreaLightHelper";
+
 export class SceneLoader {
   private textureLoader = new THREE.TextureLoader();
 
@@ -15,6 +17,7 @@ export class SceneLoader {
   async loadScene() {
     await this.setupFloor();
     await this.setupWalls();
+    this.setupCeiling();
   }
 
   private async setupFloor() {
@@ -129,6 +132,106 @@ export class SceneLoader {
     wall.add(bluePart, whitePart);
 
     return wall;
+  }
+
+  private async setupCeiling() {
+    // Ceiling plane
+    const ceilingGeom = new THREE.PlaneGeometry(
+      this.roomLength,
+      this.roomWidth,
+    );
+    const ceilingMat = new THREE.MeshStandardMaterial({
+      color: 0xf2f2f2,
+      roughness: 0.95,
+      metalness: 0.0,
+    });
+    const ceiling = new THREE.Mesh(ceilingGeom, ceilingMat);
+    ceiling.rotateX(Math.PI / 2);
+    ceiling.position.y = this.wallHeight;
+    this.scene.add(ceiling);
+
+    // Beams
+    const beamMat = new THREE.MeshStandardMaterial({
+      color: 0xe5e5e5,
+      roughness: 0.9,
+      metalness: 0.0,
+    });
+
+    const beamWidth = 0.25;
+    const beamHeight = 0.35;
+
+    // Length-wise beams
+    const beam1 = new THREE.Mesh(
+      new THREE.BoxGeometry(this.roomLength, beamHeight, beamWidth),
+      beamMat,
+    );
+    beam1.position.set(0, this.wallHeight, -this.roomWidth / 4);
+
+    const beam2 = new THREE.Mesh(
+      new THREE.BoxGeometry(this.roomLength, beamHeight, beamWidth),
+      beamMat,
+    );
+    beam2.position.set(0, this.wallHeight, this.roomWidth / 4);
+
+    this.scene.add(beam1, beam2);
+
+    // Cross beams
+    for (let x = -12; x <= 12; x += 4) {
+      const beam = new THREE.Mesh(
+        new THREE.BoxGeometry(beamWidth, beamHeight, this.roomWidth),
+        beamMat,
+      );
+      beam.position.set(x, this.wallHeight, 0);
+      this.scene.add(beam);
+    }
+
+    // Light boxes
+    this.scene.add(this.buildLightBox(-6, 7.7, -3.75));
+    this.scene.add(this.buildLightBox(6, 7.7, -3.75));
+    this.scene.add(this.buildLightBox(-6, 7.7, 3.75));
+    this.scene.add(this.buildLightBox(6, 7.7, 3.75));
+  }
+
+  private buildLightBox(xPos: number, yPos: number, zPos: number) {
+    const width = 0.5;
+    const length = 2.4;
+    const height = 0.2;
+
+    // The box
+    const box = new THREE.Mesh(
+      new THREE.BoxGeometry(length + 0.1, height, width + 0.1),
+      new THREE.MeshStandardMaterial({
+        color: 0x000000,
+        roughness: 1.0,
+        metalness: 0.0,
+      }),
+    );
+
+    // The light panel
+    const panel = new THREE.Mesh(
+      new THREE.PlaneGeometry(length, width),
+      new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        emissive: 0xffffff,
+        emissiveIntensity: 2.0, // visual brightness
+        roughness: 0.3,
+        metalness: 0.0,
+      }),
+    );
+    panel.rotateX(Math.PI / 2);
+    panel.position.y -= 0.11;
+
+    // The light
+    const light = new THREE.RectAreaLight(0xffffff, 8, length, width);
+    light.rotateX(-Math.PI / 2);
+    light.position.y -= height / 2 + 0.01;
+
+    const lightbox = new THREE.Group();
+    lightbox.add(box, panel, light);
+
+    lightbox.position.set(xPos, yPos, zPos);
+
+    return lightbox;
   }
 
   private async loadTexture(path: string) {
