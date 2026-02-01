@@ -418,7 +418,7 @@ export class SceneLoader {
   private async setupHoops() {
     // Todo build hoop base myself
     const loader = new GLTFLoader();
-    const url = getUrl("/models/hoop.glb");
+    const url = getUrl("/models/hoop2.glb");
     const gltf = await loader.loadAsync(url);
     const hoopModel = gltf.scene;
     hoopModel.scale.multiplyScalar(0.015);
@@ -537,16 +537,47 @@ export class SceneLoader {
     this.addBody(createBodyFromMesh(lowerArmLeft, options));
     this.addBody(createBodyFromMesh(lowerArmRight, options));
 
-    console.log("hoopModel", hoopModel);
-
     hoopModel.traverse((child) => {
-      if (child.name === "Basketball_Hoop" && child instanceof THREE.Mesh) {
+      if (child.name === "Backboard" && child instanceof THREE.Mesh) {
         // todo split the backboard in blender so this will work
-        //this.addBody(createBodyFromMesh(child, options));
+        this.addBody(createBodyFromMesh(child, options));
+      }
+      if (child.name === "Rim_frame" && child instanceof THREE.Mesh) {
+        this.addBody(createBodyFromMesh(child, options));
       }
     });
 
+    // Hoop rims are tricky - they require a ring of spheres
+    const rim = hoopModel.getObjectByName("Rim");
+    if (rim) {
+      const pos = rim.getWorldPosition(new THREE.Vector3());
+      this.makeRimBodies(pos);
+    }
+
     return hoop;
+  }
+
+  private makeRimBodies(center: THREE.Vector3) {
+    const rimRadius = 0.25;
+    const tubeRadius = 0.01;
+    const sphereCount = 40;
+
+    const body = new CANNON.Body({
+      type: CANNON.BODY_TYPES.STATIC,
+      material: Game.floorMaterial,
+    });
+
+    const shape = new CANNON.Sphere(tubeRadius);
+
+    for (let i = 0; i < sphereCount; i++) {
+      const a = (i / sphereCount) * Math.PI * 2;
+      const x = Math.cos(a) * rimRadius;
+      const z = Math.sin(a) * rimRadius;
+      body.addShape(shape, new CANNON.Vec3(x, 0, z));
+    }
+
+    body.position.set(center.x, center.y, center.z);
+    this.addBody(body);
   }
 
   private async loadTexture(path: string) {

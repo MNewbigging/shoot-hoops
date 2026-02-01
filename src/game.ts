@@ -125,8 +125,8 @@ export class Game {
     this.controls.moveRight(direction.x * this.moveSpeed * dt);
 
     const object = this.controls.object;
-    // object.position.x = THREE.MathUtils.clamp(object.position.x, -13.5, 13.5);
-    // object.position.z = THREE.MathUtils.clamp(object.position.z, -7, 7);
+    object.position.x = THREE.MathUtils.clamp(object.position.x, -13.5, 13.5);
+    object.position.z = THREE.MathUtils.clamp(object.position.z, -7, 7);
   }
 
   private setupLights() {
