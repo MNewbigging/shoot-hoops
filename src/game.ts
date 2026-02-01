@@ -12,7 +12,7 @@ export interface GameKeys {
   d: boolean;
 }
 
-class Game {
+export class Game {
   private renderer: THREE.WebGLRenderer;
   private camera = new THREE.PerspectiveCamera();
   private scene = new THREE.Scene();
@@ -28,6 +28,7 @@ class Game {
 
   private ball?: Ball;
   private ballMaterial = new CANNON.Material("ball");
+  static floorMaterial = new CANNON.Material("floor");
 
   private moveSpeed = 5;
 
@@ -183,16 +184,15 @@ class Game {
 
   private setupPhysics() {
     // Room boundaries
-    const floorMaterial = new CANNON.Material("floor");
     const wallMaterial = new CANNON.Material("wall");
 
     const floorBody = new CANNON.Body({
       type: CANNON.BODY_TYPES.STATIC,
-      material: floorMaterial,
+      material: Game.floorMaterial,
       shape: new CANNON.Box(new CANNON.Vec3(14, 0.1, 7.5)),
     });
     floorBody.position.y -= 0.1;
-    this.physicsWorld.addBody(floorBody);
+    //this.physicsWorld.addBody(floorBody);
 
     // (keep ceiling basic for now - add light box coliders later)
     const ceilingBody = new CANNON.Body({
@@ -238,7 +238,7 @@ class Game {
     // Contact materials
     const ballFloorMaterial = new CANNON.ContactMaterial(
       this.ballMaterial,
-      floorMaterial,
+      Game.floorMaterial,
       {
         restitution: 0.78,
         friction: 0.35,
@@ -260,7 +260,10 @@ class Game {
   }
 }
 
-export function createBodyFromObject(object: THREE.Object3D) {
+export function createBodyFromObject(
+  object: THREE.Object3D,
+  options?: CANNON.BodyOptions,
+) {
   const box = new THREE.Box3().setFromObject(object);
   const size = box.getSize(new THREE.Vector3());
 
@@ -268,9 +271,11 @@ export function createBodyFromObject(object: THREE.Object3D) {
 
   const shape = new CANNON.Box(halfExtents);
 
-  const body = new CANNON.Body();
+  const body = new CANNON.Body(options);
   body.addShape(shape);
   body.position.set(object.position.x, object.position.y, object.position.z);
+
+  return body;
 }
 
 export const game = new Game();

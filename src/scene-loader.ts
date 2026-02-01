@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import * as CANNON from "cannon-es";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
+import { createBodyFromObject, Game, game } from "./game";
 
 export class SceneLoader {
   private textureLoader = new THREE.TextureLoader();
@@ -46,12 +47,15 @@ export class SceneLoader {
     const floorWidth = 28;
     const floorHeight = 15;
     const floorGeom = new THREE.PlaneGeometry(floorWidth, floorHeight);
-
     const floor = new THREE.Mesh(floorGeom, floorMat);
-
     floor.rotateX(-Math.PI / 2);
-
     this.scene.add(floor);
+
+    const body = createBodyFromObject(floor, {
+      type: CANNON.BODY_TYPES.STATIC,
+      material: Game.floorMaterial,
+    });
+    this.addBody(body);
 
     // Add some grime to the floor
     for (let i = 0; i < 4; i++) {
