@@ -1,7 +1,5 @@
 import * as THREE from "three";
 
-import { RectAreaLightHelper } from "three/examples/jsm/helpers/RectAreaLightHelper";
-
 export class SceneLoader {
   private textureLoader = new THREE.TextureLoader();
 
@@ -45,6 +43,33 @@ export class SceneLoader {
     floor.rotateX(-Math.PI / 2);
 
     this.scene.add(floor);
+
+    // Add some grime to the floor
+    for (let i = 0; i < 4; i++) {
+      const decalSize = 2; // 0.2 + Math.random();
+      const decalSizeHalved = decalSize / 2;
+      const decal = await this.getGrimeDecal(decalSize);
+
+      decal.position.set(
+        randomRange(
+          -this.roomLengthHalved + decalSizeHalved,
+          this.roomLengthHalved - decalSizeHalved,
+        ),
+        0.01,
+        randomRange(
+          -this.roomWidthHalved + decalSizeHalved,
+          this.roomWidthHalved - decalSizeHalved,
+        ),
+      );
+
+      decal.rotateX(-Math.PI / 2);
+      decal.rotateOnWorldAxis(
+        new THREE.Vector3(0, 1, 0),
+        Math.random() * Math.PI,
+      );
+
+      this.scene.add(decal);
+    }
   }
 
   private async setupWalls() {
@@ -154,23 +179,20 @@ export class SceneLoader {
   }
 
   private async grimeWalls() {
-    const minDecalsPerWall = 3;
+    const minDecalsPerWall = 2;
     const maxDecalsPerWall = 5;
 
     // Front wall
     const frontDecals = randomRange(minDecalsPerWall, maxDecalsPerWall);
     for (let i = 0; i < frontDecals; i++) {
       const decalSize = 0.3 + Math.random();
-      const decalSizeHalved = decalSize / 2;
       const decal = await this.getGrimeDecal(decalSize);
       decal.position.set(
-        randomRange(
-          -this.roomLengthHalved + decalSizeHalved,
-          this.roomLengthHalved,
-        ),
-        randomRange(decalSizeHalved, this.wallHeight - decalSizeHalved),
+        randomRange(-this.roomLengthHalved + decalSize, this.roomLengthHalved),
+        randomRange(decalSize, this.wallHeight - decalSize),
         -this.roomWidthHalved + 0.01,
       );
+      decal.rotateZ(Math.random() * Math.PI);
       this.scene.add(decal);
     }
 
@@ -178,17 +200,14 @@ export class SceneLoader {
     const backDecals = randomRange(minDecalsPerWall, maxDecalsPerWall);
     for (let i = 0; i < backDecals; i++) {
       const decalSize = 0.3 + Math.random();
-      const decalSizeHalved = decalSize / 2;
       const decal = await this.getGrimeDecal(decalSize);
       decal.position.set(
-        randomRange(
-          -this.roomLengthHalved + decalSizeHalved,
-          this.roomLengthHalved,
-        ),
-        randomRange(decalSizeHalved, this.wallHeight - decalSizeHalved),
+        randomRange(-this.roomLengthHalved + decalSize, this.roomLengthHalved),
+        randomRange(decalSize, this.wallHeight - decalSize),
         this.roomWidthHalved - 0.01,
       );
       decal.rotateY(Math.PI);
+      decal.rotateZ(Math.random() * Math.PI);
       this.scene.add(decal);
     }
 
@@ -196,17 +215,20 @@ export class SceneLoader {
     const leftEndDecals = randomRange(minDecalsPerWall, maxDecalsPerWall);
     for (let i = 0; i < leftEndDecals; i++) {
       const decalSize = 0.3 + Math.random();
-      const decalSizeHalved = decalSize / 2;
       const decal = await this.getGrimeDecal(decalSize);
       decal.position.set(
         -this.roomLengthHalved + 0.01,
-        randomRange(decalSizeHalved, this.wallHeight - decalSizeHalved),
+        randomRange(decalSize, this.wallHeight - decalSize),
         randomRange(
-          -this.roomWidthHalved + decalSizeHalved,
-          this.roomWidthHalved - decalSizeHalved,
+          -this.roomWidthHalved + decalSize,
+          this.roomWidthHalved - decalSize,
         ),
       );
-      decal.rotateY(-Math.PI / 2);
+      decal.rotateY(Math.PI / 2);
+      decal.rotateOnWorldAxis(
+        new THREE.Vector3(1, 0, 0),
+        Math.random() * Math.PI,
+      );
       this.scene.add(decal);
     }
 
@@ -214,17 +236,20 @@ export class SceneLoader {
     const rightEndDecals = randomRange(minDecalsPerWall, maxDecalsPerWall);
     for (let i = 0; i < rightEndDecals; i++) {
       const decalSize = 0.3 + Math.random();
-      const decalSizeHalved = decalSize / 2;
       const decal = await this.getGrimeDecal(decalSize);
       decal.position.set(
         this.roomLengthHalved - 0.01,
-        randomRange(decalSizeHalved, this.wallHeight - decalSizeHalved),
+        randomRange(decalSize, this.wallHeight - decalSize),
         randomRange(
-          -this.roomWidthHalved + decalSizeHalved,
-          this.roomWidthHalved - decalSizeHalved,
+          -this.roomWidthHalved + decalSize,
+          this.roomWidthHalved - decalSize,
         ),
       );
-      decal.rotateY(Math.PI / 2);
+      decal.rotateY(-Math.PI / 2);
+      decal.rotateOnWorldAxis(
+        new THREE.Vector3(1, 0, 0),
+        Math.random() * Math.PI,
+      );
       this.scene.add(decal);
     }
   }
@@ -246,7 +271,7 @@ export class SceneLoader {
 
     decal.position.y += size / 2;
 
-    decal.rotateZ(Math.random() * Math.PI);
+    //decal.rotateZ(Math.random() * Math.PI);
 
     return decal;
   }
