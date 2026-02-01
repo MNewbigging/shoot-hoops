@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 
 export class SceneLoader {
   private textureLoader = new THREE.TextureLoader();
@@ -22,9 +23,15 @@ export class SceneLoader {
     await this.setupFloor();
     await this.setupWalls();
     this.setupCeiling();
+    await this.setupHoops();
   }
 
-  async loadBall() {}
+  async loadBall() {
+    const loader = new GLTFLoader();
+    const url = getUrl("/models/basketball_ball.glb");
+    const ball = await loader.loadAsync(url);
+    return ball.scene;
+  }
 
   private async setupFloor() {
     const floorTexture = await this.loadTexture("/textures/gym_floor.png");
@@ -183,7 +190,7 @@ export class SceneLoader {
     const maxDecalsPerWall = 5;
 
     // Front wall
-    const frontDecals = randomRange(minDecalsPerWall, maxDecalsPerWall);
+    const frontDecals = randomRangeInt(minDecalsPerWall, maxDecalsPerWall);
     for (let i = 0; i < frontDecals; i++) {
       const decalSize = 0.3 + Math.random();
       const decal = await this.getGrimeDecal(decalSize);
@@ -197,7 +204,7 @@ export class SceneLoader {
     }
 
     // Back wall
-    const backDecals = randomRange(minDecalsPerWall, maxDecalsPerWall);
+    const backDecals = randomRangeInt(minDecalsPerWall, maxDecalsPerWall);
     for (let i = 0; i < backDecals; i++) {
       const decalSize = 0.3 + Math.random();
       const decal = await this.getGrimeDecal(decalSize);
@@ -212,7 +219,7 @@ export class SceneLoader {
     }
 
     // Left end
-    const leftEndDecals = randomRange(minDecalsPerWall, maxDecalsPerWall);
+    const leftEndDecals = randomRangeInt(minDecalsPerWall, maxDecalsPerWall);
     for (let i = 0; i < leftEndDecals; i++) {
       const decalSize = 0.3 + Math.random();
       const decal = await this.getGrimeDecal(decalSize);
@@ -233,7 +240,7 @@ export class SceneLoader {
     }
 
     // Right end
-    const rightEndDecals = randomRange(minDecalsPerWall, maxDecalsPerWall);
+    const rightEndDecals = randomRangeInt(minDecalsPerWall, maxDecalsPerWall);
     for (let i = 0; i < rightEndDecals; i++) {
       const decalSize = 0.3 + Math.random();
       const decal = await this.getGrimeDecal(decalSize);
@@ -376,6 +383,129 @@ export class SceneLoader {
     return lightbox;
   }
 
+  private async setupHoops() {
+    // Todo build hoop base myself
+    const loader = new GLTFLoader();
+    const url = getUrl("/models/hoop.glb");
+    const gltf = await loader.loadAsync(url);
+    const hoopModel = gltf.scene;
+    hoopModel.scale.multiplyScalar(0.015);
+
+    const mountDepth = 1.5;
+    const hoopHeight = 4;
+
+    const leftHoop = this.buildHoop(hoopModel, mountDepth);
+    leftHoop.rotateY(Math.PI / 2);
+    leftHoop.position.set(-this.roomLengthHalved + mountDepth, hoopHeight, 0);
+    this.scene.add(leftHoop);
+
+    const rightHoop = this.buildHoop(hoopModel.clone(true), mountDepth);
+    rightHoop.rotateY(-Math.PI / 2);
+    rightHoop.position.set(this.roomLengthHalved - mountDepth, hoopHeight, 0);
+    this.scene.add(rightHoop);
+  }
+
+  private buildHoop(hoopModel: THREE.Group, mountDepth: number) {
+    // Create the mount
+    const mountMaterial = new THREE.MeshStandardMaterial({
+      color: 0x191f22,
+      roughness: 0.45,
+      metalness: 0.7,
+    });
+
+    // Backboard is 0.63m wide, 1.5m tall
+    const mountThickness = 0.06;
+    const middleOffset = 0.5;
+
+    const wallBracketLeft = new THREE.Mesh(
+      new THREE.BoxGeometry(0.1, 1.2, mountThickness),
+      mountMaterial,
+    );
+    const walLBracketRight = wallBracketLeft.clone();
+
+    wallBracketLeft.position.x = -middleOffset;
+    walLBracketRight.position.x = middleOffset;
+
+    const upperArmLeft = new THREE.Mesh(
+      new THREE.BoxGeometry(mountThickness, mountThickness, mountDepth),
+      mountMaterial,
+    );
+    const upperArmRight = upperArmLeft.clone();
+    const lowerArmLeft = upperArmLeft.clone();
+    const lowerArmRight = upperArmLeft.clone();
+
+    upperArmLeft.position.set(-middleOffset, 0.25, mountDepth / 2);
+    upperArmRight.position.set(middleOffset, 0.25, mountDepth / 2);
+    lowerArmLeft.position.set(-middleOffset, -0.25, mountDepth / 2);
+    lowerArmRight.position.set(middleOffset, -0.25, mountDepth / 2);
+
+    const mount = new THREE.Group();
+    mount.add(
+      wallBracketLeft,
+      walLBracketRight,
+      upperArmLeft,
+      upperArmRight,
+      lowerArmLeft,
+      lowerArmRight,
+    );
+
+    mount.position.z = -mountDepth;
+
+    const hoop = new THREE.Group();
+    hoop.add(mount, hoopModel);
+
+    return hoop;
+  }
+
+  private buildHoopMount() {
+    // Create the mount
+    const mountMaterial = new THREE.MeshStandardMaterial({
+      color: 0x000000,
+      roughness: 0.3,
+      metalness: 0.3,
+    });
+
+    const mountDepth = 1.5;
+    const mountThickness = 0.06;
+
+    const wallBracketLeft = new THREE.Mesh(
+      new THREE.BoxGeometry(0.1, 1.2, mountThickness),
+      mountMaterial,
+    );
+    const walLBracketRight = wallBracketLeft.clone();
+
+    // Backboard is 0.42m wide, 1m tall
+    wallBracketLeft.position.x = -0.4;
+    walLBracketRight.position.x = 0.4;
+
+    const upperArmLeft = new THREE.Mesh(
+      new THREE.BoxGeometry(mountThickness, mountThickness, mountDepth),
+      mountMaterial,
+    );
+    const upperArmRight = upperArmLeft.clone();
+    const lowerArmLeft = upperArmLeft.clone();
+    const lowerArmRight = upperArmLeft.clone();
+
+    upperArmLeft.position.set(-0.4, 0.25, mountDepth / 2);
+    upperArmRight.position.set(0.4, 0.25, mountDepth / 2);
+    lowerArmLeft.position.set(-0.4, -0.25, mountDepth / 2);
+    lowerArmRight.position.set(0.4, -0.25, mountDepth / 2);
+
+    const mount = new THREE.Group();
+    mount.add(
+      wallBracketLeft,
+      walLBracketRight,
+      upperArmLeft,
+      upperArmRight,
+      lowerArmLeft,
+      lowerArmRight,
+    );
+
+    mount.position.z = -mountDepth;
+
+    return mount;
+  }
+
   private async loadTexture(path: string) {
     const url = getUrl(path);
     const texture = await this.textureLoader.loadAsync(url);
@@ -404,5 +534,10 @@ function getUrl(path: string) {
 }
 
 function randomRange(min: number, max: number) {
-  return min + Math.random() * (max - min);
+  return Math.random() * (max - min) + min;
+}
+
+function randomRangeInt(min: number, max: number) {
+  const result = Math.floor(randomRange(min, max));
+  return result;
 }

@@ -47,6 +47,10 @@ export class Game {
 
     await sceneLoader.loadScene();
 
+    const ball = await sceneLoader.loadBall();
+    ball.position.y = 1.6;
+    this.scene.add(ball);
+
     onComplete();
   }
 
