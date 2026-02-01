@@ -40,6 +40,7 @@ export class SceneLoader {
   }
 
   private async setupWalls() {
+    // Walls
     const front = await this.buildWall(this.roomLength);
     front.position.z = -this.roomWidth / 2;
 
@@ -56,6 +57,13 @@ export class SceneLoader {
     right.rotateY(-Math.PI / 2);
 
     this.scene.add(front, back, left, right);
+
+    // Props
+    const door = await this.buildDoor();
+    door.rotateY(-Math.PI / 2);
+    door.position.x = this.roomLength / 2 - 0.001;
+
+    this.scene.add(door);
   }
 
   private async buildWall(length: number) {
@@ -106,6 +114,30 @@ export class SceneLoader {
     wall.add(bluePart, whitePart);
 
     return wall;
+  }
+
+  private async buildDoor() {
+    const map = await this.loadTexture("/textures/door_albedo.png");
+    const normalMap = await this.loadTexture("/textures/door_normal.png");
+
+    const mat = new THREE.MeshStandardMaterial({
+      map,
+      normalMap,
+      normalScale: new THREE.Vector2(2.2, 2.2),
+      transparent: true,
+      roughness: 0.65,
+      metalness: 0.05,
+      alphaTest: 0.5,
+    });
+
+    const height = 3.2;
+    const width = 2.8;
+
+    const door = new THREE.Mesh(new THREE.PlaneGeometry(width, height), mat);
+
+    door.position.y += height / 2 - 0.3;
+
+    return door;
   }
 
   private async setupCeiling() {
@@ -196,12 +228,12 @@ export class SceneLoader {
     panel.position.y -= 0.11;
 
     // The light
-    const light = new THREE.RectAreaLight(0xffffff, 8, length, width);
-    light.rotateX(-Math.PI / 2);
-    light.position.y -= height / 2 + 0.01;
+    // const light = new THREE.RectAreaLight(0xffffff, 8, length, width);
+    // light.rotateX(-Math.PI / 2);
+    // light.position.y -= height / 2 + 0.01;
 
     const lightbox = new THREE.Group();
-    lightbox.add(box, panel, light);
+    lightbox.add(box, panel); // add light
 
     lightbox.position.set(xPos, yPos, zPos);
 
