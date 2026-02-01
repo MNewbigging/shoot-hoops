@@ -9,16 +9,24 @@ export class SceneLoader {
   private readonly roomWidth = 15;
   private readonly wallHeight = 8;
 
+  private roomLengthHalved: number;
+  private roomWidthHalved: number;
+
   constructor(
     private scene: THREE.Scene,
     private renderer: THREE.WebGLRenderer,
-  ) {}
+  ) {
+    this.roomLengthHalved = this.roomLength / 2;
+    this.roomWidthHalved = this.roomWidth / 2;
+  }
 
   async loadScene() {
     await this.setupFloor();
     await this.setupWalls();
     this.setupCeiling();
   }
+
+  async loadBall() {}
 
   private async setupFloor() {
     const floorTexture = await this.loadTexture("/textures/gym_floor.png");
@@ -42,26 +50,30 @@ export class SceneLoader {
   private async setupWalls() {
     // Walls
     const front = await this.buildWall(this.roomLength);
-    front.position.z = -this.roomWidth / 2;
+    front.position.z = -this.roomWidthHalved;
 
     const back = await this.buildWall(this.roomLength);
-    back.position.z = this.roomWidth / 2;
+    back.position.z = this.roomWidthHalved;
     back.rotateY(Math.PI);
 
     const left = await this.buildWall(this.roomWidth);
-    left.position.x = -this.roomLength / 2;
+    left.position.x = -this.roomLengthHalved;
     left.rotateY(Math.PI / 2);
 
     const right = await this.buildWall(this.roomWidth);
-    right.position.x = this.roomLength / 2;
+    right.position.x = this.roomLengthHalved;
     right.rotateY(-Math.PI / 2);
 
     this.scene.add(front, back, left, right);
 
+    // Grime decals on walls
+    await this.grimeWalls();
+
     // Props
     const door = await this.buildDoor();
     door.rotateY(-Math.PI / 2);
-    door.position.x = this.roomLength / 2 - 0.001;
+    door.position.x = this.roomLengthHalved - 0.001;
+    door.position.z = this.roomWidthHalved / 2;
 
     this.scene.add(door);
   }
@@ -128,16 +140,115 @@ export class SceneLoader {
       roughness: 0.65,
       metalness: 0.05,
       alphaTest: 0.5,
+      depthWrite: false,
     });
 
     const height = 3.2;
-    const width = 2.8;
+    const width = 3.2;
 
     const door = new THREE.Mesh(new THREE.PlaneGeometry(width, height), mat);
 
-    door.position.y += height / 2 - 0.3;
+    door.position.y += height / 2 - 0.295;
 
     return door;
+  }
+
+  private async grimeWalls() {
+    const minDecalsPerWall = 3;
+    const maxDecalsPerWall = 5;
+
+    // Front wall
+    const frontDecals = randomRange(minDecalsPerWall, maxDecalsPerWall);
+    for (let i = 0; i < frontDecals; i++) {
+      const decalSize = 0.3 + Math.random();
+      const decalSizeHalved = decalSize / 2;
+      const decal = await this.getGrimeDecal(decalSize);
+      decal.position.set(
+        randomRange(
+          -this.roomLengthHalved + decalSizeHalved,
+          this.roomLengthHalved,
+        ),
+        randomRange(decalSizeHalved, this.wallHeight - decalSizeHalved),
+        -this.roomWidthHalved + 0.01,
+      );
+      this.scene.add(decal);
+    }
+
+    // Back wall
+    const backDecals = randomRange(minDecalsPerWall, maxDecalsPerWall);
+    for (let i = 0; i < backDecals; i++) {
+      const decalSize = 0.3 + Math.random();
+      const decalSizeHalved = decalSize / 2;
+      const decal = await this.getGrimeDecal(decalSize);
+      decal.position.set(
+        randomRange(
+          -this.roomLengthHalved + decalSizeHalved,
+          this.roomLengthHalved,
+        ),
+        randomRange(decalSizeHalved, this.wallHeight - decalSizeHalved),
+        this.roomWidthHalved - 0.01,
+      );
+      decal.rotateY(Math.PI);
+      this.scene.add(decal);
+    }
+
+    // Left end
+    const leftEndDecals = randomRange(minDecalsPerWall, maxDecalsPerWall);
+    for (let i = 0; i < leftEndDecals; i++) {
+      const decalSize = 0.3 + Math.random();
+      const decalSizeHalved = decalSize / 2;
+      const decal = await this.getGrimeDecal(decalSize);
+      decal.position.set(
+        -this.roomLengthHalved + 0.01,
+        randomRange(decalSizeHalved, this.wallHeight - decalSizeHalved),
+        randomRange(
+          -this.roomWidthHalved + decalSizeHalved,
+          this.roomWidthHalved - decalSizeHalved,
+        ),
+      );
+      decal.rotateY(-Math.PI / 2);
+      this.scene.add(decal);
+    }
+
+    // Right end
+    const rightEndDecals = randomRange(minDecalsPerWall, maxDecalsPerWall);
+    for (let i = 0; i < rightEndDecals; i++) {
+      const decalSize = 0.3 + Math.random();
+      const decalSizeHalved = decalSize / 2;
+      const decal = await this.getGrimeDecal(decalSize);
+      decal.position.set(
+        this.roomLengthHalved - 0.01,
+        randomRange(decalSizeHalved, this.wallHeight - decalSizeHalved),
+        randomRange(
+          -this.roomWidthHalved + decalSizeHalved,
+          this.roomWidthHalved - decalSizeHalved,
+        ),
+      );
+      decal.rotateY(Math.PI / 2);
+      this.scene.add(decal);
+    }
+  }
+
+  private async getGrimeDecal(size: number) {
+    const grimeToUse = Math.random() < 0.5 ? "grime_1" : "grime_2";
+    const map = await this.loadTexture(`/textures/${grimeToUse}.png`);
+
+    const grimeMat = new THREE.MeshStandardMaterial({
+      map,
+      transparent: true,
+      depthWrite: false,
+      roughness: 1.0,
+      metalness: 0.0,
+      opacity: 0.2 + Math.random() * 0.3,
+    });
+
+    const decal = new THREE.Mesh(new THREE.PlaneGeometry(size, size), grimeMat);
+
+    decal.position.y += size / 2;
+
+    decal.rotateZ(Math.random() * Math.PI);
+
+    return decal;
   }
 
   private async setupCeiling() {
@@ -265,4 +376,8 @@ function getUrl(path: string) {
   const prefix = location.hostname === "localhost" ? "" : "/shoot-hoops";
   const adjustedPath = `${prefix}${path}`;
   return new URL(adjustedPath, import.meta.url).href;
+}
+
+function randomRange(min: number, max: number) {
+  return min + Math.random() * (max - min);
 }
