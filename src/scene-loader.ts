@@ -229,5 +229,8 @@ export class SceneLoader {
 }
 
 function getUrl(path: string) {
-  return new URL(path, import.meta.url).href;
+  // Add path prefix if not on localhost
+  const prefix = location.hostname === "localhost" ? "" : "/shoot-hoops";
+  const adjustedPath = `${prefix}${path}`;
+  return new URL(adjustedPath, import.meta.url).href;
 }
