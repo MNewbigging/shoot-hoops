@@ -29,6 +29,7 @@ export class Game {
   private ball?: Ball;
   private ballMaterial = new CANNON.Material("ball");
   static floorMaterial = new CANNON.Material("floor");
+  static wallMaterial = new CANNON.Material("wall");
 
   private moveSpeed = 5;
 
@@ -124,8 +125,8 @@ export class Game {
     this.controls.moveRight(direction.x * this.moveSpeed * dt);
 
     const object = this.controls.object;
-    object.position.x = THREE.MathUtils.clamp(object.position.x, -13.5, 13.5);
-    object.position.z = THREE.MathUtils.clamp(object.position.z, -7, 7);
+    // object.position.x = THREE.MathUtils.clamp(object.position.x, -13.5, 13.5);
+    // object.position.z = THREE.MathUtils.clamp(object.position.z, -7, 7);
   }
 
   private setupLights() {
@@ -178,63 +179,11 @@ export class Game {
     }
   };
 
-  private addBody = (body: CANNON.Body) => {
-    this.physicsWorld.addBody(body);
+  private addBody = (body: CANNON.Body | null) => {
+    if (body) this.physicsWorld.addBody(body);
   };
 
   private setupPhysics() {
-    // Room boundaries
-    const wallMaterial = new CANNON.Material("wall");
-
-    const floorBody = new CANNON.Body({
-      type: CANNON.BODY_TYPES.STATIC,
-      material: Game.floorMaterial,
-      shape: new CANNON.Box(new CANNON.Vec3(14, 0.1, 7.5)),
-    });
-    floorBody.position.y -= 0.1;
-    //this.physicsWorld.addBody(floorBody);
-
-    // (keep ceiling basic for now - add light box coliders later)
-    const ceilingBody = new CANNON.Body({
-      type: CANNON.BODY_TYPES.STATIC,
-      material: wallMaterial,
-      shape: new CANNON.Box(new CANNON.Vec3(14, 0.1, 7.5)),
-    });
-    ceilingBody.position.y = 8.1;
-    this.physicsWorld.addBody(ceilingBody);
-
-    const frontWallBody = new CANNON.Body({
-      type: CANNON.BODY_TYPES.STATIC,
-      material: wallMaterial,
-      shape: new CANNON.Box(new CANNON.Vec3(14, 4, 0.1)),
-    });
-    frontWallBody.position.set(0, 4, -7.6);
-    this.physicsWorld.addBody(frontWallBody);
-
-    const backWallBody = new CANNON.Body({
-      type: CANNON.BODY_TYPES.STATIC,
-      material: wallMaterial,
-      shape: new CANNON.Box(new CANNON.Vec3(14, 4, 0.1)),
-    });
-    backWallBody.position.set(0, 4, 7.6);
-    this.physicsWorld.addBody(backWallBody);
-
-    const leftWallBody = new CANNON.Body({
-      type: CANNON.BODY_TYPES.STATIC,
-      material: wallMaterial,
-      shape: new CANNON.Box(new CANNON.Vec3(0.1, 4, 7.5)),
-    });
-    leftWallBody.position.set(-14.1, 4, 0);
-    this.physicsWorld.addBody(leftWallBody);
-
-    const rightWallBody = new CANNON.Body({
-      type: CANNON.BODY_TYPES.STATIC,
-      material: wallMaterial,
-      shape: new CANNON.Box(new CANNON.Vec3(0.1, 4, 7.5)),
-    });
-    rightWallBody.position.set(14.1, 4, 0);
-    this.physicsWorld.addBody(rightWallBody);
-
     // Contact materials
     const ballFloorMaterial = new CANNON.ContactMaterial(
       this.ballMaterial,
@@ -250,7 +199,7 @@ export class Game {
 
     const ballWallMaterial = new CANNON.ContactMaterial(
       this.ballMaterial,
-      wallMaterial,
+      Game.wallMaterial,
       {
         restitution: 0.65,
         friction: 0.4,
@@ -260,20 +209,50 @@ export class Game {
   }
 }
 
-export function createBodyFromObject(
-  object: THREE.Object3D,
+export function createBodyFromMesh(
+  mesh: THREE.Mesh,
   options?: CANNON.BodyOptions,
 ) {
-  const box = new THREE.Box3().setFromObject(object);
-  const size = box.getSize(new THREE.Vector3());
+  mesh.updateWorldMatrix(true, false);
 
-  const halfExtents = new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2);
+  const geom = mesh.geometry;
+  if (!geom.boundingBox) geom.computeBoundingBox();
+  if (!geom.boundingBox) return null;
 
-  const shape = new CANNON.Box(halfExtents);
+  const worldBox = new THREE.Box3()
+    .copy(geom.boundingBox)
+    .applyMatrix4(mesh.matrixWorld);
+
+  const size = worldBox.getSize(new THREE.Vector3());
+  const center = worldBox.getCenter(new THREE.Vector3());
 
   const body = new CANNON.Body(options);
-  body.addShape(shape);
-  body.position.set(object.position.x, object.position.y, object.position.z);
+
+  body.position.set(center.x, center.y, center.z);
+  body.addShape(
+    new CANNON.Box(new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2)),
+  );
+
+  return body;
+}
+
+export function createBodyFromGroup(
+  group: THREE.Group,
+  options?: CANNON.BodyOptions,
+) {
+  group.updateWorldMatrix(true, false);
+
+  const worldBox = new THREE.Box3().setFromObject(group);
+
+  const size = worldBox.getSize(new THREE.Vector3());
+  const center = worldBox.getCenter(new THREE.Vector3());
+
+  const body = new CANNON.Body(options);
+
+  body.position.set(center.x, center.y, center.z);
+  body.addShape(
+    new CANNON.Box(new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2)),
+  );
 
   return body;
 }

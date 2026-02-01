@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import * as CANNON from "cannon-es";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
-import { createBodyFromObject, Game, game } from "./game";
+import { createBodyFromMesh, createBodyFromGroup, Game } from "./game";
 
 export class SceneLoader {
   private textureLoader = new THREE.TextureLoader();
@@ -16,7 +16,7 @@ export class SceneLoader {
   constructor(
     private scene: THREE.Scene,
     private renderer: THREE.WebGLRenderer,
-    private addBody: (body: CANNON.Body) => void,
+    private addBody: (body: CANNON.Body | null) => void,
   ) {
     this.roomLengthHalved = this.roomLength / 2;
     this.roomWidthHalved = this.roomWidth / 2;
@@ -51,7 +51,7 @@ export class SceneLoader {
     floor.rotateX(-Math.PI / 2);
     this.scene.add(floor);
 
-    const body = createBodyFromObject(floor, {
+    const body = createBodyFromMesh(floor, {
       type: CANNON.BODY_TYPES.STATIC,
       material: Game.floorMaterial,
     });
@@ -86,23 +86,31 @@ export class SceneLoader {
   }
 
   private async setupWalls() {
+    const options: CANNON.BodyOptions = {
+      type: CANNON.BODY_TYPES.STATIC,
+      material: Game.wallMaterial,
+    };
+
     // Walls
     const front = await this.buildWall(this.roomLength);
     front.position.z = -this.roomWidthHalved;
+    this.addBody(createBodyFromGroup(front, options));
 
     const back = await this.buildWall(this.roomLength);
     back.position.z = this.roomWidthHalved;
     back.rotateY(Math.PI);
+    this.addBody(createBodyFromGroup(back, options));
 
     const left = await this.buildWall(this.roomWidth);
     left.position.x = -this.roomLengthHalved;
     left.rotateY(Math.PI / 2);
+    this.addBody(createBodyFromGroup(left, options));
 
     const right = await this.buildWall(this.roomWidth);
     right.position.x = this.roomLengthHalved;
     right.rotateY(-Math.PI / 2);
-
     this.scene.add(front, back, left, right);
+    this.addBody(createBodyFromGroup(right, options));
 
     // Grime decals on walls
     await this.grimeWalls();
@@ -290,6 +298,11 @@ export class SceneLoader {
   }
 
   private async setupCeiling() {
+    const options: CANNON.BodyOptions = {
+      type: CANNON.BODY_TYPES.STATIC,
+      material: Game.wallMaterial,
+    };
+
     // Ceiling plane
     const ceilingGeom = new THREE.PlaneGeometry(
       this.roomLength,
@@ -304,6 +317,9 @@ export class SceneLoader {
     ceiling.rotateX(Math.PI / 2);
     ceiling.position.y = this.wallHeight;
     this.scene.add(ceiling);
+
+    const ceilingBody = createBodyFromMesh(ceiling, options);
+    this.addBody(ceilingBody);
 
     // Beams
     const beamMat = new THREE.MeshStandardMaterial({
@@ -329,6 +345,8 @@ export class SceneLoader {
     beam2.position.set(0, this.wallHeight, this.roomWidth / 4);
 
     this.scene.add(beam1, beam2);
+    this.addBody(createBodyFromMesh(beam1, options));
+    this.addBody(createBodyFromMesh(beam2, options));
 
     // Cross beams
     for (let x = -12; x <= 12; x += 4) {
@@ -338,13 +356,21 @@ export class SceneLoader {
       );
       beam.position.set(x, this.wallHeight, 0);
       this.scene.add(beam);
+      this.addBody(createBodyFromMesh(beam, options));
     }
 
     // Light boxes
-    this.scene.add(this.buildLightBox(-6, 7.7, -3.75));
-    this.scene.add(this.buildLightBox(6, 7.7, -3.75));
-    this.scene.add(this.buildLightBox(-6, 7.7, 3.75));
-    this.scene.add(this.buildLightBox(6, 7.7, 3.75));
+    const lb1 = this.buildLightBox(-6, 7.7, -3.75);
+    const lb2 = this.buildLightBox(6, 7.7, -3.75);
+    const lb3 = this.buildLightBox(-6, 7.7, 3.75);
+    const lb4 = this.buildLightBox(6, 7.7, 3.75);
+
+    this.scene.add(lb1, lb2, lb3, lb4);
+
+    this.addBody(createBodyFromGroup(lb1, options));
+    this.addBody(createBodyFromGroup(lb2, options));
+    this.addBody(createBodyFromGroup(lb3, options));
+    this.addBody(createBodyFromGroup(lb4, options));
   }
 
   private buildLightBox(xPos: number, yPos: number, zPos: number) {
@@ -400,18 +426,43 @@ export class SceneLoader {
     const mountDepth = 1.5;
     const hoopHeight = 4;
 
-    const leftHoop = this.buildHoop(hoopModel, mountDepth);
-    leftHoop.rotateY(Math.PI / 2);
-    leftHoop.position.set(-this.roomLengthHalved + mountDepth, hoopHeight, 0);
+    const leftHoop = this.buildHoop(
+      hoopModel,
+      mountDepth,
+      {
+        x: -this.roomLengthHalved + mountDepth,
+        y: hoopHeight,
+        z: 0,
+      },
+      {
+        axis: { x: 0, y: 1, z: 0 },
+        angle: Math.PI / 2,
+      },
+    );
     this.scene.add(leftHoop);
 
-    const rightHoop = this.buildHoop(hoopModel.clone(true), mountDepth);
-    rightHoop.rotateY(-Math.PI / 2);
-    rightHoop.position.set(this.roomLengthHalved - mountDepth, hoopHeight, 0);
+    const rightHoop = this.buildHoop(
+      hoopModel.clone(true),
+      mountDepth,
+      {
+        x: this.roomLengthHalved - mountDepth,
+        y: hoopHeight,
+        z: 0,
+      },
+      {
+        axis: { x: 0, y: 1, z: 0 },
+        angle: -Math.PI / 2,
+      },
+    );
     this.scene.add(rightHoop);
   }
 
-  private buildHoop(hoopModel: THREE.Group, mountDepth: number) {
+  private buildHoop(
+    hoopModel: THREE.Group,
+    mountDepth: number,
+    pos: THREE.Vector3Like,
+    axisAngle: { axis: THREE.Vector3Like; angle: number },
+  ) {
     // Create the mount
     const mountMaterial = new THREE.MeshStandardMaterial({
       color: 0x191f22,
@@ -427,10 +478,12 @@ export class SceneLoader {
       new THREE.BoxGeometry(0.1, 1.2, mountThickness),
       mountMaterial,
     );
-    const walLBracketRight = wallBracketLeft.clone();
+    wallBracketLeft.name = "wall-bracket-left";
+    const wallBracketRight = wallBracketLeft.clone();
+    wallBracketRight.name = "wall-bracket-right";
 
     wallBracketLeft.position.x = -middleOffset;
-    walLBracketRight.position.x = middleOffset;
+    wallBracketRight.position.x = middleOffset;
 
     const upperArmLeft = new THREE.Mesh(
       new THREE.BoxGeometry(mountThickness, mountThickness, mountDepth),
@@ -440,6 +493,11 @@ export class SceneLoader {
     const lowerArmLeft = upperArmLeft.clone();
     const lowerArmRight = upperArmLeft.clone();
 
+    upperArmLeft.name = "upper-arm-left";
+    upperArmRight.name = "upper-arm-right";
+    lowerArmLeft.name = "lower-arm-left";
+    lowerArmRight.name = "lower-arm-right";
+
     upperArmLeft.position.set(-middleOffset, 0.25, mountDepth / 2);
     upperArmRight.position.set(middleOffset, 0.25, mountDepth / 2);
     lowerArmLeft.position.set(-middleOffset, -0.25, mountDepth / 2);
@@ -448,7 +506,7 @@ export class SceneLoader {
     const mount = new THREE.Group();
     mount.add(
       wallBracketLeft,
-      walLBracketRight,
+      wallBracketRight,
       upperArmLeft,
       upperArmRight,
       lowerArmLeft,
@@ -459,6 +517,34 @@ export class SceneLoader {
 
     const hoop = new THREE.Group();
     hoop.add(mount, hoopModel);
+
+    hoop.position.copy(pos);
+    hoop.setRotationFromAxisAngle(
+      new THREE.Vector3().copy(axisAngle.axis),
+      axisAngle.angle,
+    );
+
+    // Now we can do physics bodies
+    const options: CANNON.BodyOptions = {
+      type: CANNON.BODY_TYPES.STATIC,
+      material: Game.floorMaterial,
+    };
+
+    this.addBody(createBodyFromMesh(wallBracketLeft, options));
+    this.addBody(createBodyFromMesh(wallBracketRight, options));
+    this.addBody(createBodyFromMesh(upperArmLeft, options));
+    this.addBody(createBodyFromMesh(upperArmRight, options));
+    this.addBody(createBodyFromMesh(lowerArmLeft, options));
+    this.addBody(createBodyFromMesh(lowerArmRight, options));
+
+    console.log("hoopModel", hoopModel);
+
+    hoopModel.traverse((child) => {
+      if (child.name === "Basketball_Hoop" && child instanceof THREE.Mesh) {
+        // todo split the backboard in blender so this will work
+        //this.addBody(createBodyFromMesh(child, options));
+      }
+    });
 
     return hoop;
   }
@@ -498,3 +584,9 @@ function randomRangeInt(min: number, max: number) {
   const result = Math.floor(randomRange(min, max));
   return result;
 }
+
+/**
+ * For static objects:
+ * - build, place and rotate objects first
+ * - then make the physics body for it
+ */
