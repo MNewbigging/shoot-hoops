@@ -1,6 +1,9 @@
 import * as THREE from "three";
+import * as CANNON from "cannon-es";
+import CannonDebugger from "cannon-es-debugger";
 import { PointerLockControls } from "three/examples/jsm/controls/PointerLockControls";
 import { SceneLoader } from "./scene-loader";
+import { Ball } from "./ball";
 
 export interface GameKeys {
   w: boolean;
@@ -9,12 +12,22 @@ export interface GameKeys {
   d: boolean;
 }
 
-export class Game {
+class Game {
   private renderer: THREE.WebGLRenderer;
   private camera = new THREE.PerspectiveCamera();
   private scene = new THREE.Scene();
   private clock = new THREE.Clock();
   private controls: PointerLockControls;
+
+  private loading = false;
+
+  private physicsWorld: CANNON.World;
+  private physicsDebugger: {
+    update: () => void;
+  };
+
+  private ball?: Ball;
+  private ballMaterial = new CANNON.Material("ball");
 
   private moveSpeed = 5;
 
@@ -40,16 +53,38 @@ export class Game {
     window.addEventListener("resize", this.onCanvasResize);
     window.addEventListener("keydown", this.onKeyDown);
     window.addEventListener("keyup", this.onKeyUp);
+
+    // Physics
+    this.physicsWorld = new CANNON.World({
+      gravity: new CANNON.Vec3(0, -9.81, 0),
+    });
+
+    this.physicsDebugger = CannonDebugger(this.scene, this.physicsWorld, {
+      color: 0xff0000,
+    });
+
+    this.setupPhysics();
   }
 
   async load(onComplete: () => void) {
+    if (this.loading) {
+      console.log("already loading");
+      return;
+    }
+
+    this.loading = true;
+
     const sceneLoader = new SceneLoader(this.scene, this.renderer);
 
     await sceneLoader.loadScene();
 
-    const ball = await sceneLoader.loadBall();
-    ball.position.y = 1.6;
-    this.scene.add(ball);
+    const ballMesh = await sceneLoader.loadBall();
+    this.ball = new Ball(ballMesh, this.ballMaterial);
+    this.ball.body.position.y = 5;
+    this.ball.mesh.position.y = 5;
+    this.scene.add(this.ball.mesh);
+    console.log("added ball to scene");
+    this.physicsWorld.addBody(this.ball.body);
 
     onComplete();
   }
@@ -67,6 +102,12 @@ export class Game {
     const dt = this.clock.getDelta();
 
     this.movePlayer(dt);
+
+    this.ball?.updateMesh();
+
+    this.physicsWorld.step(1 / 60, dt, 3);
+
+    this.physicsDebugger.update();
 
     this.renderer.render(this.scene, this.camera);
   };
@@ -133,4 +174,73 @@ export class Game {
         break;
     }
   };
+
+  private setupPhysics() {
+    // Room boundaries
+    const floorMaterial = new CANNON.Material("floor");
+    const floorBody = new CANNON.Body({
+      type: CANNON.BODY_TYPES.STATIC,
+      material: floorMaterial,
+      shape: new CANNON.Box(new CANNON.Vec3(14, 0.1, 7.5)),
+    });
+    floorBody.position.y -= 0.1;
+    this.physicsWorld.addBody(floorBody);
+
+    // (keep ceiling basic for now - add light box coliders later)
+    const ceilingBody = new CANNON.Body({
+      type: CANNON.BODY_TYPES.STATIC,
+      material: floorMaterial,
+      shape: new CANNON.Box(new CANNON.Vec3(14, 0.1, 7.5)),
+    });
+    ceilingBody.position.y = 8.1;
+    this.physicsWorld.addBody(ceilingBody);
+
+    const wallMaterial = new CANNON.Material("wall");
+    const frontWallBody = new CANNON.Body({
+      type: CANNON.BODY_TYPES.STATIC,
+      material: wallMaterial,
+      shape: new CANNON.Box(new CANNON.Vec3(14, 4, 0.1)),
+    });
+    frontWallBody.position.set(0, 4, -7.6);
+    this.physicsWorld.addBody(frontWallBody);
+
+    const backWallBody = new CANNON.Body({
+      type: CANNON.BODY_TYPES.STATIC,
+      material: wallMaterial,
+      shape: new CANNON.Box(new CANNON.Vec3(14, 4, 0.1)),
+    });
+    backWallBody.position.set(0, 4, 7.6);
+    this.physicsWorld.addBody(backWallBody);
+
+    const leftWallBody = new CANNON.Body({
+      type: CANNON.BODY_TYPES.STATIC,
+      material: wallMaterial,
+      shape: new CANNON.Box(new CANNON.Vec3(0.1, 4, 7.5)),
+    });
+    leftWallBody.position.set(-14.1, 4, 0);
+    this.physicsWorld.addBody(leftWallBody);
+
+    const rightWallBody = new CANNON.Body({
+      type: CANNON.BODY_TYPES.STATIC,
+      material: wallMaterial,
+      shape: new CANNON.Box(new CANNON.Vec3(0.1, 4, 7.5)),
+    });
+    rightWallBody.position.set(14.1, 4, 0);
+    this.physicsWorld.addBody(rightWallBody);
+
+    // Contact materials
+    const ballFloorMaterial = new CANNON.ContactMaterial(
+      this.ballMaterial,
+      floorMaterial,
+      {
+        restitution: 0.78,
+        friction: 0.35,
+        contactEquationRelaxation: 3,
+        contactEquationStiffness: 1e8,
+      },
+    );
+    this.physicsWorld.addContactMaterial(ballFloorMaterial);
+  }
 }
+
+export const game = new Game();

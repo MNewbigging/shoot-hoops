@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
-import { Game } from "../game";
+import { game } from "../game";
 import "./app.scss";
-
-const game = new Game();
 
 export function App() {
   const [loaded, setLoaded] = useState(false);
