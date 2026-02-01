@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import * as CANNON from "cannon-es";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 
 export class SceneLoader {
@@ -14,6 +15,7 @@ export class SceneLoader {
   constructor(
     private scene: THREE.Scene,
     private renderer: THREE.WebGLRenderer,
+    private addBody: (body: CANNON.Body) => void,
   ) {
     this.roomLengthHalved = this.roomLength / 2;
     this.roomWidthHalved = this.roomWidth / 2;
@@ -455,55 +457,6 @@ export class SceneLoader {
     hoop.add(mount, hoopModel);
 
     return hoop;
-  }
-
-  private buildHoopMount() {
-    // Create the mount
-    const mountMaterial = new THREE.MeshStandardMaterial({
-      color: 0x000000,
-      roughness: 0.3,
-      metalness: 0.3,
-    });
-
-    const mountDepth = 1.5;
-    const mountThickness = 0.06;
-
-    const wallBracketLeft = new THREE.Mesh(
-      new THREE.BoxGeometry(0.1, 1.2, mountThickness),
-      mountMaterial,
-    );
-    const walLBracketRight = wallBracketLeft.clone();
-
-    // Backboard is 0.42m wide, 1m tall
-    wallBracketLeft.position.x = -0.4;
-    walLBracketRight.position.x = 0.4;
-
-    const upperArmLeft = new THREE.Mesh(
-      new THREE.BoxGeometry(mountThickness, mountThickness, mountDepth),
-      mountMaterial,
-    );
-    const upperArmRight = upperArmLeft.clone();
-    const lowerArmLeft = upperArmLeft.clone();
-    const lowerArmRight = upperArmLeft.clone();
-
-    upperArmLeft.position.set(-0.4, 0.25, mountDepth / 2);
-    upperArmRight.position.set(0.4, 0.25, mountDepth / 2);
-    lowerArmLeft.position.set(-0.4, -0.25, mountDepth / 2);
-    lowerArmRight.position.set(0.4, -0.25, mountDepth / 2);
-
-    const mount = new THREE.Group();
-    mount.add(
-      wallBracketLeft,
-      walLBracketRight,
-      upperArmLeft,
-      upperArmRight,
-      lowerArmLeft,
-      lowerArmRight,
-    );
-
-    mount.position.z = -mountDepth;
-
-    return mount;
   }
 
   private async loadTexture(path: string) {

@@ -68,13 +68,16 @@ class Game {
 
   async load(onComplete: () => void) {
     if (this.loading) {
-      console.log("already loading");
       return;
     }
 
     this.loading = true;
 
-    const sceneLoader = new SceneLoader(this.scene, this.renderer);
+    const sceneLoader = new SceneLoader(
+      this.scene,
+      this.renderer,
+      this.addBody,
+    );
 
     await sceneLoader.loadScene();
 
@@ -83,7 +86,6 @@ class Game {
     this.ball.body.position.y = 5;
     this.ball.mesh.position.y = 5;
     this.scene.add(this.ball.mesh);
-    console.log("added ball to scene");
     this.physicsWorld.addBody(this.ball.body);
 
     onComplete();
@@ -175,9 +177,15 @@ class Game {
     }
   };
 
+  private addBody = (body: CANNON.Body) => {
+    this.physicsWorld.addBody(body);
+  };
+
   private setupPhysics() {
     // Room boundaries
     const floorMaterial = new CANNON.Material("floor");
+    const wallMaterial = new CANNON.Material("wall");
+
     const floorBody = new CANNON.Body({
       type: CANNON.BODY_TYPES.STATIC,
       material: floorMaterial,
@@ -189,13 +197,12 @@ class Game {
     // (keep ceiling basic for now - add light box coliders later)
     const ceilingBody = new CANNON.Body({
       type: CANNON.BODY_TYPES.STATIC,
-      material: floorMaterial,
+      material: wallMaterial,
       shape: new CANNON.Box(new CANNON.Vec3(14, 0.1, 7.5)),
     });
     ceilingBody.position.y = 8.1;
     this.physicsWorld.addBody(ceilingBody);
 
-    const wallMaterial = new CANNON.Material("wall");
     const frontWallBody = new CANNON.Body({
       type: CANNON.BODY_TYPES.STATIC,
       material: wallMaterial,
@@ -240,7 +247,30 @@ class Game {
       },
     );
     this.physicsWorld.addContactMaterial(ballFloorMaterial);
+
+    const ballWallMaterial = new CANNON.ContactMaterial(
+      this.ballMaterial,
+      wallMaterial,
+      {
+        restitution: 0.65,
+        friction: 0.4,
+      },
+    );
+    this.physicsWorld.addContactMaterial(ballWallMaterial);
   }
+}
+
+export function createBodyFromObject(object: THREE.Object3D) {
+  const box = new THREE.Box3().setFromObject(object);
+  const size = box.getSize(new THREE.Vector3());
+
+  const halfExtents = new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2);
+
+  const shape = new CANNON.Box(halfExtents);
+
+  const body = new CANNON.Body();
+  body.addShape(shape);
+  body.position.set(object.position.x, object.position.y, object.position.z);
 }
 
 export const game = new Game();
