@@ -4,7 +4,10 @@ import * as THREE from "three";
 export class Ball {
   body: CANNON.Body;
 
+  held = false;
+
   private readonly radius = 0.15;
+  private handOffset = new THREE.Vector3(0.25, 0, -1);
 
   constructor(
     public mesh: THREE.Group,
@@ -17,8 +20,27 @@ export class Ball {
     });
   }
 
-  updateMesh() {
-    this.mesh.position.copy(this.body.position);
-    this.mesh.quaternion.copy(this.body.quaternion);
+  hold() {
+    this.body.collisionFilterMask = 0; // don't hit anything
+    this.body.velocity.set(0, 0, 0);
+    this.body.angularVelocity.set(0, 0, 0);
+    this.body.sleep();
+
+    this.held = true;
+  }
+
+  updateMesh(camera: THREE.PerspectiveCamera) {
+    if (this.held) {
+      // Follow camera
+      camera.updateMatrixWorld(true);
+      const targetPos = this.handOffset
+        .clone()
+        .applyMatrix4(camera.matrixWorld);
+      this.mesh.position.copy(targetPos);
+    } else {
+      // Follow body
+      this.mesh.position.copy(this.body.position);
+      this.mesh.quaternion.copy(this.body.quaternion);
+    }
   }
 }

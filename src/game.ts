@@ -106,8 +106,9 @@ export class Game {
     const dt = this.clock.getDelta();
 
     this.movePlayer(dt);
+    this.pickupBall();
 
-    this.ball?.updateMesh();
+    this.ball?.updateMesh(this.camera);
 
     this.physicsWorld.step(1 / 60, dt, 3);
 
@@ -127,6 +128,17 @@ export class Game {
     const object = this.controls.object;
     object.position.x = THREE.MathUtils.clamp(object.position.x, -13.5, 13.5);
     object.position.z = THREE.MathUtils.clamp(object.position.z, -7, 7);
+    object.updateMatrixWorld(true);
+  }
+
+  private pickupBall() {
+    if (!this.ball) return;
+    if (this.ball.held) return;
+
+    const grabRange = 0.2 + this.camera.position.y;
+    if (this.ball.mesh.position.distanceTo(this.camera.position) < grabRange) {
+      this.ball.hold();
+    }
   }
 
   private setupLights() {
