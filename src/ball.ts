@@ -30,9 +30,30 @@ export class Ball {
     this.held = true;
   }
 
+  throw(direction: THREE.Vector3Like, throwSpeed: number) {
+    this.body.wakeUp();
+    this.body.collisionFilterMask = -1; // collide with everything
+
+    // Make sure start pos is set to mesh current values
+    const pos = this.mesh.position;
+    this.body.position.set(pos.x, pos.y, pos.z);
+    const quat = this.mesh.quaternion;
+    this.body.quaternion.set(quat.x, quat.y, quat.z, quat.w);
+
+    // Add velocity for throw
+    this.body.velocity.set(
+      direction.x * throwSpeed,
+      direction.y * throwSpeed,
+      direction.z * throwSpeed,
+    );
+
+    this.held = false;
+  }
+
   updateMesh(camera: THREE.PerspectiveCamera, dt: number) {
     if (this.held) {
       // Follow camera
+      // todo prevent going through walls
       camera.updateMatrixWorld(true);
 
       const targetPos = this.handOffset

@@ -10,6 +10,7 @@ export interface GameKeys {
   a: boolean;
   s: boolean;
   d: boolean;
+  rmb: boolean;
 }
 
 export class Game {
@@ -38,6 +39,7 @@ export class Game {
     a: false,
     s: false,
     d: false,
+    rmb: false,
   };
 
   constructor() {
@@ -55,6 +57,8 @@ export class Game {
     window.addEventListener("resize", this.onCanvasResize);
     window.addEventListener("keydown", this.onKeyDown);
     window.addEventListener("keyup", this.onKeyUp);
+    window.addEventListener("mousedown", this.onMouseDown);
+    window.addEventListener("mouseup", this.onMouseUp);
 
     // Physics
     this.physicsWorld = new CANNON.World({
@@ -133,6 +137,7 @@ export class Game {
 
   private pickupBall() {
     if (!this.ball) return;
+    if (!this.keys.rmb) return;
     if (this.ball.held) return;
 
     const grabRange = 0.2 + this.camera.position.y;
@@ -140,6 +145,21 @@ export class Game {
       this.ball.hold();
     }
   }
+
+  private onMouseDown = (e: MouseEvent) => {
+    if (e.button === 2) this.keys.rmb = true;
+    if (e.button !== 0) return;
+    // todo track time started
+  };
+
+  private onMouseUp = (e: MouseEvent) => {
+    if (e.button === 2) this.keys.rmb = false;
+    if (e.button !== 0) return;
+    if (!this.ball?.held) return;
+
+    const direction = this.camera.getWorldDirection(new THREE.Vector3());
+    this.ball.throw(direction, 12);
+  };
 
   private setupLights() {
     const hemi = new THREE.HemisphereLight(0xffffff, 0x888888, 0.6);
