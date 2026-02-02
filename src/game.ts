@@ -108,7 +108,7 @@ export class Game {
     this.movePlayer(dt);
     this.pickupBall();
 
-    this.ball?.updateMesh(this.camera);
+    this.ball?.updateMesh(this.camera, dt);
 
     this.physicsWorld.step(1 / 60, dt, 3);
 

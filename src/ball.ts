@@ -8,6 +8,7 @@ export class Ball {
 
   private readonly radius = 0.15;
   private handOffset = new THREE.Vector3(0.25, 0, -1);
+  private holdStiffness = 15;
 
   constructor(
     public mesh: THREE.Group,
@@ -29,14 +30,22 @@ export class Ball {
     this.held = true;
   }
 
-  updateMesh(camera: THREE.PerspectiveCamera) {
+  updateMesh(camera: THREE.PerspectiveCamera, dt: number) {
     if (this.held) {
       // Follow camera
       camera.updateMatrixWorld(true);
+
       const targetPos = this.handOffset
         .clone()
         .applyMatrix4(camera.matrixWorld);
-      this.mesh.position.copy(targetPos);
+
+      const step = targetPos
+        .clone()
+        .sub(this.mesh.position)
+        .multiplyScalar(dt * this.holdStiffness);
+
+      this.mesh.position.add(step);
+      this.mesh.quaternion.copy(camera.quaternion);
     } else {
       // Follow body
       this.mesh.position.copy(this.body.position);
