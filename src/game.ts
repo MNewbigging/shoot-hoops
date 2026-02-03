@@ -256,6 +256,7 @@ export function createBodyFromMesh(
     .applyMatrix4(mesh.matrixWorld);
 
   const size = worldBox.getSize(new THREE.Vector3());
+
   const center = worldBox.getCenter(new THREE.Vector3());
 
   const body = new CANNON.Body(options);
@@ -272,16 +273,38 @@ export function createBodyFromGroup(
   group: THREE.Group,
   options?: CANNON.BodyOptions,
 ) {
-  group.updateWorldMatrix(true, false);
+  group.updateWorldMatrix(true, true);
 
   const worldBox = new THREE.Box3().setFromObject(group);
 
   const size = worldBox.getSize(new THREE.Vector3());
-  const center = worldBox.getCenter(new THREE.Vector3());
+
+  // Enforce a minimum size for the box
+  const minSize = 0.3;
+  if (size.x < minSize) size.x = minSize;
+  if (size.y < minSize) size.y = minSize;
+  if (size.z < minSize) size.z = minSize;
 
   const body = new CANNON.Body(options);
 
+  const center = worldBox.getCenter(new THREE.Vector3());
   body.position.set(center.x, center.y, center.z);
+
+  body.addShape(
+    new CANNON.Box(new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2)),
+  );
+
+  return body;
+}
+
+export function createBodyFromProps(
+  pos: THREE.Vector3Like,
+  size: THREE.Vector3Like,
+  options?: CANNON.BodyOptions,
+) {
+  const body = new CANNON.Body(options);
+  body.position.set(pos.x, pos.y, pos.z);
+
   body.addShape(
     new CANNON.Box(new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2)),
   );

@@ -1,7 +1,12 @@
 import * as THREE from "three";
 import * as CANNON from "cannon-es";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
-import { createBodyFromMesh, createBodyFromGroup, Game } from "./game";
+import {
+  createBodyFromMesh,
+  createBodyFromGroup,
+  Game,
+  createBodyFromProps,
+} from "./game";
 
 export class SceneLoader {
   private textureLoader = new THREE.TextureLoader();
@@ -9,6 +14,7 @@ export class SceneLoader {
   private readonly roomLength = 28;
   private readonly roomWidth = 15;
   private readonly wallHeight = 8;
+  private readonly minBodyDepth = 0.3;
 
   private roomLengthHalved: number;
   private roomWidthHalved: number;
@@ -51,11 +57,20 @@ export class SceneLoader {
     floor.rotateX(-Math.PI / 2);
     this.scene.add(floor);
 
-    const body = createBodyFromMesh(floor, {
-      type: CANNON.BODY_TYPES.STATIC,
-      material: Game.floorMaterial,
-    });
-    this.addBody(body);
+    this.addBody(
+      createBodyFromProps(
+        {
+          x: 0,
+          y: -this.minBodyDepth / 2,
+          z: 0,
+        },
+        { x: this.roomLength, y: this.minBodyDepth, z: this.roomWidth },
+        {
+          type: CANNON.BODY_TYPES.STATIC,
+          material: Game.floorMaterial,
+        },
+      ),
+    );
 
     // Add some grime to the floor
     for (let i = 0; i < 4; i++) {
@@ -94,23 +109,67 @@ export class SceneLoader {
     // Walls
     const front = await this.buildWall(this.roomLength);
     front.position.z = -this.roomWidthHalved;
-    this.addBody(createBodyFromGroup(front, options));
 
     const back = await this.buildWall(this.roomLength);
     back.position.z = this.roomWidthHalved;
     back.rotateY(Math.PI);
-    this.addBody(createBodyFromGroup(back, options));
 
     const left = await this.buildWall(this.roomWidth);
     left.position.x = -this.roomLengthHalved;
     left.rotateY(Math.PI / 2);
-    this.addBody(createBodyFromGroup(left, options));
 
     const right = await this.buildWall(this.roomWidth);
     right.position.x = this.roomLengthHalved;
     right.rotateY(-Math.PI / 2);
     this.scene.add(front, back, left, right);
-    this.addBody(createBodyFromGroup(right, options));
+
+    // Wall bodies - since they're infinitely thin we need custom bodies
+    const minDepthHalved = this.minBodyDepth / 2;
+    const wallHeightHalved = this.wallHeight / 2;
+    this.addBody(
+      createBodyFromProps(
+        {
+          x: front.position.x,
+          y: wallHeightHalved,
+          z: front.position.z - minDepthHalved,
+        },
+        { x: this.roomLength, y: this.wallHeight, z: this.minBodyDepth },
+        options,
+      ),
+    );
+    this.addBody(
+      createBodyFromProps(
+        {
+          x: back.position.x,
+          y: wallHeightHalved,
+          z: back.position.z + minDepthHalved,
+        },
+        { x: this.roomLength, y: this.wallHeight, z: this.minBodyDepth },
+        options,
+      ),
+    );
+    this.addBody(
+      createBodyFromProps(
+        {
+          x: left.position.x - minDepthHalved,
+          y: wallHeightHalved,
+          z: left.position.z,
+        },
+        { x: this.minBodyDepth, y: this.wallHeight, z: this.roomWidth },
+        options,
+      ),
+    );
+    this.addBody(
+      createBodyFromProps(
+        {
+          x: right.position.x + minDepthHalved,
+          y: wallHeightHalved,
+          z: right.position.z,
+        },
+        { x: this.minBodyDepth, y: this.wallHeight, z: this.roomWidth },
+        options,
+      ),
+    );
 
     // Grime decals on walls
     await this.grimeWalls();
@@ -318,8 +377,13 @@ export class SceneLoader {
     ceiling.position.y = this.wallHeight;
     this.scene.add(ceiling);
 
-    const ceilingBody = createBodyFromMesh(ceiling, options);
-    this.addBody(ceilingBody);
+    this.addBody(
+      createBodyFromProps(
+        { x: 0, y: this.wallHeight + this.minBodyDepth / 2, z: 0 },
+        { x: this.roomLength, y: this.minBodyDepth, z: this.roomWidth },
+        { type: CANNON.BODY_TYPES.STATIC, material: Game.wallMaterial },
+      ),
+    );
 
     // Beams
     const beamMat = new THREE.MeshStandardMaterial({
