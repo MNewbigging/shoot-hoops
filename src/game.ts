@@ -50,7 +50,7 @@ export class Game {
     this.setupLights();
 
     this.camera.position.set(0, 1.8, 3);
-    this.camera.fov = 60;
+    this.camera.fov = 65;
     this.camera.near = 0.05;
     this.camera.far = 100;
     this.controls = new PointerLockControls(
@@ -93,7 +93,7 @@ export class Game {
     await sceneLoader.loadScene();
 
     const ballMesh = await sceneLoader.loadBall();
-    this.ball = new Ball(ballMesh, this.scene, this.ballMaterial);
+    this.ball = new Ball(ballMesh, this.scene, this.camera, this.ballMaterial);
     this.ball.body.position.y = 5;
     this.ball.mesh.position.y = 5;
     this.scene.add(this.ball.mesh);
@@ -117,7 +117,7 @@ export class Game {
     this.movePlayer(dt);
     this.pickupBall();
 
-    this.ball?.update(this.camera, dt);
+    this.ball?.update(dt);
 
     this.physicsWorld.step(1 / 60, dt, 3);
 
@@ -162,8 +162,7 @@ export class Game {
     if (e.button !== 0) return;
     if (!this.ball?.held) return;
 
-    const direction = this.camera.getWorldDirection(new THREE.Vector3());
-    this.ball.throw(direction, this.ball.throwSpeed);
+    this.ball.throw();
   };
 
   private setupLights() {

@@ -14,6 +14,10 @@ export class Ball {
   private ballHelper: THREE.Points;
   private ballHelperPoints = 60;
 
+  private throwPitch = 0; // radians
+  private minThrowPitch = -0.3;
+  private maxThrowPitch = 0.6;
+
   private reused = {
     ballWorld: new THREE.Vector3(),
     cameraDir: new THREE.Vector3(),
@@ -22,6 +26,7 @@ export class Ball {
   constructor(
     public mesh: THREE.Group,
     private scene: THREE.Scene,
+    private camera: THREE.PerspectiveCamera,
     material: CANNON.Material,
   ) {
     // Physics
@@ -44,6 +49,9 @@ export class Ball {
     this.ballHelper.visible = false;
     this.ballHelper.frustumCulled = false;
     this.scene.add(this.ballHelper);
+
+    // Listeners
+    window.addEventListener("wheel", this.onWheel);
   }
 
   hold() {
@@ -55,7 +63,7 @@ export class Ball {
     this.held = true;
   }
 
-  throw(direction: THREE.Vector3Like, throwSpeed: number) {
+  throw() {
     this.body.wakeUp();
     this.body.collisionFilterMask = -1; // collide with everything
 
@@ -65,30 +73,44 @@ export class Ball {
     const quat = this.mesh.quaternion;
     this.body.quaternion.set(quat.x, quat.y, quat.z, quat.w);
 
+    // Get throw direction
+    const direction = this.getThrowDirection();
+
     // Add velocity for throw
     this.body.velocity.set(
-      direction.x * throwSpeed,
-      direction.y * throwSpeed,
-      direction.z * throwSpeed,
+      direction.x * this.throwSpeed,
+      direction.y * this.throwSpeed,
+      direction.z * this.throwSpeed,
     );
 
     this.held = false;
   }
 
-  update(camera: THREE.PerspectiveCamera, dt: number) {
-    this.updateMesh(camera, dt);
-    this.updateBallHelper(camera);
+  update(dt: number) {
+    this.updateMesh(dt);
+    this.updateBallHelper();
   }
 
-  private updateMesh(camera: THREE.PerspectiveCamera, dt: number) {
+  private getThrowDirection() {
+    const direction = this.camera.getWorldDirection(this.reused.cameraDir);
+    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(
+      this.camera.quaternion,
+    );
+    direction.applyAxisAngle(right, this.throwPitch);
+    direction.normalize();
+
+    return direction;
+  }
+
+  private updateMesh(dt: number) {
     if (this.held) {
       // Follow camera
       // todo prevent going through walls
-      camera.updateMatrixWorld(true);
+      this.camera.updateMatrixWorld(true);
 
       const targetPos = this.handOffset
         .clone()
-        .applyMatrix4(camera.matrixWorld);
+        .applyMatrix4(this.camera.matrixWorld);
 
       const step = targetPos
         .clone()
@@ -96,7 +118,7 @@ export class Ball {
         .multiplyScalar(dt * this.holdStiffness);
 
       this.mesh.position.add(step);
-      this.mesh.quaternion.copy(camera.quaternion);
+      this.mesh.quaternion.copy(this.camera.quaternion);
     } else {
       // Follow body
       this.mesh.position.copy(this.body.position);
@@ -104,7 +126,7 @@ export class Ball {
     }
   }
 
-  private updateBallHelper(camera: THREE.PerspectiveCamera) {
+  private updateBallHelper() {
     // Only show when holding the ball
     if (!this.held) {
       this.ballHelper.visible = false;
@@ -114,10 +136,10 @@ export class Ball {
     this.ballHelper.visible = true;
 
     const startPos = this.mesh.getWorldPosition(this.reused.ballWorld);
-    const direction = camera.getWorldDirection(this.reused.cameraDir);
+    const direction = this.getThrowDirection();
     const velocity = direction.multiplyScalar(this.throwSpeed);
     const dt = 1 / 30; // Bigger number = bigger gap between points
-    const steps = 30; // How many point positions to sample
+    const steps = 60; // How many point positions to sample
     const points = this.sampleTrajectoryPoints(startPos, velocity, steps, dt);
     const posAttr = this.ballHelper.geometry.getAttribute(
       "position",
@@ -151,4 +173,17 @@ export class Ball {
 
     return points;
   }
+
+  private onWheel = (e: WheelEvent) => {
+    const delta = Math.sign(e.deltaY); // -1 for scroll up or 1 for scroll down
+
+    const step = 0.03; // radians per tick
+    this.throwPitch -= delta * step;
+
+    this.throwPitch = THREE.MathUtils.clamp(
+      this.throwPitch,
+      this.minThrowPitch,
+      this.maxThrowPitch,
+    );
+  };
 }
