@@ -13,6 +13,8 @@ export interface GameKeys {
   rmb: boolean;
 }
 
+export const GRAVITY = -9.82;
+
 export class Game {
   private renderer: THREE.WebGLRenderer;
   private camera = new THREE.PerspectiveCamera();
@@ -23,15 +25,17 @@ export class Game {
   private loading = false;
 
   private physicsWorld: CANNON.World;
+  private ballMaterial = new CANNON.Material("ball");
+  static floorMaterial = new CANNON.Material("floor");
+  static wallMaterial = new CANNON.Material("wall");
   private physicsDebugger: {
     update: () => void;
   };
 
   private ball?: Ball;
-  private ballMaterial = new CANNON.Material("ball");
-  static floorMaterial = new CANNON.Material("floor");
-  static wallMaterial = new CANNON.Material("wall");
-
+  private ballHelper: THREE.Points;
+  private ballHelperPoints = 60;
+  private throwSpeed = 12;
   private moveSpeed = 5;
 
   private keys: GameKeys = {
@@ -48,6 +52,9 @@ export class Game {
     this.setupLights();
 
     this.camera.position.set(0, 1.8, 3);
+    this.camera.fov = 60;
+    this.camera.near = 0.05;
+    this.camera.far = 100;
     this.controls = new PointerLockControls(
       this.camera,
       this.renderer.domElement,
@@ -62,7 +69,7 @@ export class Game {
 
     // Physics
     this.physicsWorld = new CANNON.World({
-      gravity: new CANNON.Vec3(0, -9.81, 0),
+      gravity: new CANNON.Vec3(0, GRAVITY, 0),
     });
 
     this.physicsDebugger = CannonDebugger(this.scene, this.physicsWorld, {
@@ -70,6 +77,20 @@ export class Game {
     });
 
     this.setupPhysics();
+
+    // Ball helper
+    const helperGeometry = new THREE.BufferGeometry();
+    helperGeometry.setAttribute(
+      "position",
+      new THREE.BufferAttribute(new Float32Array(this.ballHelperPoints * 3), 3),
+    );
+    this.ballHelper = new THREE.Points(
+      helperGeometry,
+      new THREE.PointsMaterial({ size: 0.04, sizeAttenuation: true }),
+    );
+    this.ballHelper.visible = false;
+    this.ballHelper.frustumCulled = false;
+    this.scene.add(this.ballHelper);
   }
 
   async load(onComplete: () => void) {
@@ -111,6 +132,7 @@ export class Game {
 
     this.movePlayer(dt);
     this.pickupBall();
+    this.updateBallHelper();
 
     this.ball?.updateMesh(this.camera, dt);
 
@@ -146,6 +168,33 @@ export class Game {
     }
   }
 
+  private updateBallHelper() {
+    // Only show when holding the ball
+    if (!this.ball?.held) {
+      this.ballHelper.visible = false;
+      return;
+    }
+
+    this.ballHelper.visible = true;
+
+    const startPos = this.ball.mesh.getWorldPosition(new THREE.Vector3());
+    const direction = this.camera.getWorldDirection(new THREE.Vector3());
+    const velocity = direction.multiplyScalar(this.throwSpeed);
+    const dt = 1 / 30; // Bigger number = bigger gap between points
+    const steps = 30; // How many point positions to sample
+    const points = this.sampleTrajectoryPoints(startPos, velocity, steps, dt);
+    const posAttr = this.ballHelper.geometry.getAttribute(
+      "position",
+    ) as THREE.BufferAttribute;
+    // Iterate over all points in the helper
+    for (let i = 0; i < this.ballHelperPoints; i++) {
+      // Assign a sampled position if it exists, or stack on last point if not
+      const p = points[i] ?? points[points.length - 1];
+      posAttr.setXYZ(i, p.x, p.y, p.z);
+    }
+    posAttr.needsUpdate = true;
+  }
+
   private onMouseDown = (e: MouseEvent) => {
     if (e.button === 2) this.keys.rmb = true;
     if (e.button !== 0) return;
@@ -158,7 +207,7 @@ export class Game {
     if (!this.ball?.held) return;
 
     const direction = this.camera.getWorldDirection(new THREE.Vector3());
-    this.ball.throw(direction, 12);
+    this.ball.throw(direction, this.throwSpeed);
   };
 
   private setupLights() {
@@ -238,6 +287,27 @@ export class Game {
       },
     );
     this.physicsWorld.addContactMaterial(ballWallMaterial);
+  }
+
+  private sampleTrajectoryPoints(
+    startPoint: THREE.Vector3Like,
+    velocity: THREE.Vector3Like,
+    steps: number,
+    fixedDt: number,
+  ) {
+    const points: THREE.Vector3[] = [];
+
+    for (let i = 0; i < steps; i++) {
+      const time = i * fixedDt;
+      const point = new THREE.Vector3(
+        startPoint.x + velocity.x * time,
+        startPoint.y + velocity.y * time + 0.5 * GRAVITY * time * time,
+        startPoint.z + velocity.z * time,
+      );
+      points.push(point);
+    }
+
+    return points;
   }
 }
 

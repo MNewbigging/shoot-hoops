@@ -1,5 +1,6 @@
 import * as CANNON from "cannon-es";
 import * as THREE from "three";
+import { GRAVITY } from "./game";
 
 export class Ball {
   body: CANNON.Body;
