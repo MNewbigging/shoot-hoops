@@ -33,9 +33,7 @@ export class Game {
   };
 
   private ball?: Ball;
-  private ballHelper: THREE.Points;
-  private ballHelperPoints = 60;
-  private throwSpeed = 12;
+
   private moveSpeed = 5;
 
   private keys: GameKeys = {
@@ -77,20 +75,6 @@ export class Game {
     });
 
     this.setupPhysics();
-
-    // Ball helper
-    const helperGeometry = new THREE.BufferGeometry();
-    helperGeometry.setAttribute(
-      "position",
-      new THREE.BufferAttribute(new Float32Array(this.ballHelperPoints * 3), 3),
-    );
-    this.ballHelper = new THREE.Points(
-      helperGeometry,
-      new THREE.PointsMaterial({ size: 0.04, sizeAttenuation: true }),
-    );
-    this.ballHelper.visible = false;
-    this.ballHelper.frustumCulled = false;
-    this.scene.add(this.ballHelper);
   }
 
   async load(onComplete: () => void) {
@@ -109,7 +93,7 @@ export class Game {
     await sceneLoader.loadScene();
 
     const ballMesh = await sceneLoader.loadBall();
-    this.ball = new Ball(ballMesh, this.ballMaterial);
+    this.ball = new Ball(ballMesh, this.scene, this.ballMaterial);
     this.ball.body.position.y = 5;
     this.ball.mesh.position.y = 5;
     this.scene.add(this.ball.mesh);
@@ -132,9 +116,8 @@ export class Game {
 
     this.movePlayer(dt);
     this.pickupBall();
-    this.updateBallHelper();
 
-    this.ball?.updateMesh(this.camera, dt);
+    this.ball?.update(this.camera, dt);
 
     this.physicsWorld.step(1 / 60, dt, 3);
 
@@ -168,33 +151,6 @@ export class Game {
     }
   }
 
-  private updateBallHelper() {
-    // Only show when holding the ball
-    if (!this.ball?.held) {
-      this.ballHelper.visible = false;
-      return;
-    }
-
-    this.ballHelper.visible = true;
-
-    const startPos = this.ball.mesh.getWorldPosition(new THREE.Vector3());
-    const direction = this.camera.getWorldDirection(new THREE.Vector3());
-    const velocity = direction.multiplyScalar(this.throwSpeed);
-    const dt = 1 / 30; // Bigger number = bigger gap between points
-    const steps = 30; // How many point positions to sample
-    const points = this.sampleTrajectoryPoints(startPos, velocity, steps, dt);
-    const posAttr = this.ballHelper.geometry.getAttribute(
-      "position",
-    ) as THREE.BufferAttribute;
-    // Iterate over all points in the helper
-    for (let i = 0; i < this.ballHelperPoints; i++) {
-      // Assign a sampled position if it exists, or stack on last point if not
-      const p = points[i] ?? points[points.length - 1];
-      posAttr.setXYZ(i, p.x, p.y, p.z);
-    }
-    posAttr.needsUpdate = true;
-  }
-
   private onMouseDown = (e: MouseEvent) => {
     if (e.button === 2) this.keys.rmb = true;
     if (e.button !== 0) return;
@@ -207,7 +163,7 @@ export class Game {
     if (!this.ball?.held) return;
 
     const direction = this.camera.getWorldDirection(new THREE.Vector3());
-    this.ball.throw(direction, this.throwSpeed);
+    this.ball.throw(direction, this.ball.throwSpeed);
   };
 
   private setupLights() {
@@ -287,27 +243,6 @@ export class Game {
       },
     );
     this.physicsWorld.addContactMaterial(ballWallMaterial);
-  }
-
-  private sampleTrajectoryPoints(
-    startPoint: THREE.Vector3Like,
-    velocity: THREE.Vector3Like,
-    steps: number,
-    fixedDt: number,
-  ) {
-    const points: THREE.Vector3[] = [];
-
-    for (let i = 0; i < steps; i++) {
-      const time = i * fixedDt;
-      const point = new THREE.Vector3(
-        startPoint.x + velocity.x * time,
-        startPoint.y + velocity.y * time + 0.5 * GRAVITY * time * time,
-        startPoint.z + velocity.z * time,
-      );
-      points.push(point);
-    }
-
-    return points;
   }
 }
 
