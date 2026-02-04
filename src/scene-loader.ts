@@ -8,25 +8,19 @@ import {
   createBodyFromProps,
 } from "./game";
 
+export const ROOM_SIZE = new THREE.Vector3(28, 8, 15);
+export const ROOM_SIZE_HALVED = ROOM_SIZE.clone().multiplyScalar(0.5);
+
 export class SceneLoader {
   private textureLoader = new THREE.TextureLoader();
 
-  private readonly roomLength = 28;
-  private readonly roomWidth = 15;
-  private readonly wallHeight = 8;
   private readonly minBodyDepth = 0.3;
-
-  private roomLengthHalved: number;
-  private roomWidthHalved: number;
 
   constructor(
     private scene: THREE.Scene,
     private renderer: THREE.WebGLRenderer,
     private addBody: (body: CANNON.Body | null) => void,
-  ) {
-    this.roomLengthHalved = this.roomLength / 2;
-    this.roomWidthHalved = this.roomWidth / 2;
-  }
+  ) {}
 
   async loadScene() {
     await this.setupFloor();
@@ -50,9 +44,7 @@ export class SceneLoader {
       metalness: 0.0,
     });
 
-    const floorWidth = 28;
-    const floorHeight = 15;
-    const floorGeom = new THREE.PlaneGeometry(floorWidth, floorHeight);
+    const floorGeom = new THREE.PlaneGeometry(ROOM_SIZE.x, ROOM_SIZE.z);
     const floor = new THREE.Mesh(floorGeom, floorMat);
     floor.rotateX(-Math.PI / 2);
     this.scene.add(floor);
@@ -64,7 +56,7 @@ export class SceneLoader {
           y: -this.minBodyDepth / 2,
           z: 0,
         },
-        { x: this.roomLength, y: this.minBodyDepth, z: this.roomWidth },
+        { x: ROOM_SIZE.x, y: this.minBodyDepth, z: ROOM_SIZE.z },
         {
           type: CANNON.BODY_TYPES.STATIC,
           material: Game.floorMaterial,
@@ -80,13 +72,13 @@ export class SceneLoader {
 
       decal.position.set(
         randomRange(
-          -this.roomLengthHalved + decalSizeHalved,
-          this.roomLengthHalved - decalSizeHalved,
+          -ROOM_SIZE_HALVED.x + decalSizeHalved,
+          ROOM_SIZE_HALVED.x - decalSizeHalved,
         ),
         0.01,
         randomRange(
-          -this.roomWidthHalved + decalSizeHalved,
-          this.roomWidthHalved - decalSizeHalved,
+          -ROOM_SIZE_HALVED.z + decalSizeHalved,
+          ROOM_SIZE_HALVED.z - decalSizeHalved,
         ),
       );
 
@@ -107,33 +99,32 @@ export class SceneLoader {
     };
 
     // Walls
-    const front = await this.buildWall(this.roomLength);
-    front.position.z = -this.roomWidthHalved;
+    const front = await this.buildWall(ROOM_SIZE.x);
+    front.position.z = -ROOM_SIZE_HALVED.z;
 
-    const back = await this.buildWall(this.roomLength);
-    back.position.z = this.roomWidthHalved;
+    const back = await this.buildWall(ROOM_SIZE.x);
+    back.position.z = ROOM_SIZE_HALVED.z;
     back.rotateY(Math.PI);
 
-    const left = await this.buildWall(this.roomWidth);
-    left.position.x = -this.roomLengthHalved;
+    const left = await this.buildWall(ROOM_SIZE.z);
+    left.position.x = -ROOM_SIZE_HALVED.x;
     left.rotateY(Math.PI / 2);
 
-    const right = await this.buildWall(this.roomWidth);
-    right.position.x = this.roomLengthHalved;
+    const right = await this.buildWall(ROOM_SIZE.z);
+    right.position.x = ROOM_SIZE_HALVED.x;
     right.rotateY(-Math.PI / 2);
     this.scene.add(front, back, left, right);
 
     // Wall bodies - since they're infinitely thin we need custom bodies
     const minDepthHalved = this.minBodyDepth / 2;
-    const wallHeightHalved = this.wallHeight / 2;
     this.addBody(
       createBodyFromProps(
         {
           x: front.position.x,
-          y: wallHeightHalved,
+          y: ROOM_SIZE_HALVED.y,
           z: front.position.z - minDepthHalved,
         },
-        { x: this.roomLength, y: this.wallHeight, z: this.minBodyDepth },
+        { x: ROOM_SIZE.x, y: ROOM_SIZE.y, z: this.minBodyDepth },
         options,
       ),
     );
@@ -141,10 +132,10 @@ export class SceneLoader {
       createBodyFromProps(
         {
           x: back.position.x,
-          y: wallHeightHalved,
+          y: ROOM_SIZE_HALVED.y,
           z: back.position.z + minDepthHalved,
         },
-        { x: this.roomLength, y: this.wallHeight, z: this.minBodyDepth },
+        { x: ROOM_SIZE.x, y: ROOM_SIZE.y, z: this.minBodyDepth },
         options,
       ),
     );
@@ -152,10 +143,10 @@ export class SceneLoader {
       createBodyFromProps(
         {
           x: left.position.x - minDepthHalved,
-          y: wallHeightHalved,
+          y: ROOM_SIZE_HALVED.y,
           z: left.position.z,
         },
-        { x: this.minBodyDepth, y: this.wallHeight, z: this.roomWidth },
+        { x: this.minBodyDepth, y: ROOM_SIZE.y, z: ROOM_SIZE.z },
         options,
       ),
     );
@@ -163,10 +154,10 @@ export class SceneLoader {
       createBodyFromProps(
         {
           x: right.position.x + minDepthHalved,
-          y: wallHeightHalved,
+          y: ROOM_SIZE_HALVED.y,
           z: right.position.z,
         },
-        { x: this.minBodyDepth, y: this.wallHeight, z: this.roomWidth },
+        { x: this.minBodyDepth, y: ROOM_SIZE.y, z: ROOM_SIZE.z },
         options,
       ),
     );
@@ -177,8 +168,8 @@ export class SceneLoader {
     // Props
     const door = await this.buildDoor();
     door.rotateY(-Math.PI / 2);
-    door.position.x = this.roomLengthHalved - 0.001;
-    door.position.z = this.roomWidthHalved / 2;
+    door.position.x = ROOM_SIZE_HALVED.x - 0.001;
+    door.position.z = ROOM_SIZE_HALVED.z / 2;
 
     this.scene.add(door);
   }
@@ -189,7 +180,7 @@ export class SceneLoader {
     const blueTexture = await this.loadTexture("/textures/wall_blue.png");
     const normal = await this.loadTexture("/textures/wall_normal.png");
 
-    const repeat = new THREE.Vector2(length / 2, this.wallHeight / 4); // 2 rows so divide by 4
+    const repeat = new THREE.Vector2(length / 2, ROOM_SIZE.y / 4); // 2 rows so divide by 4
     whiteTexture.repeat.copy(repeat);
     blueTexture.repeat.copy(repeat);
     normal.repeat.copy(repeat);
@@ -215,18 +206,18 @@ export class SceneLoader {
     const wall = new THREE.Group();
 
     const bluePart = new THREE.Mesh(
-      new THREE.PlaneGeometry(length, this.wallHeight / 2),
+      new THREE.PlaneGeometry(length, ROOM_SIZE_HALVED.y),
       blueMaterial,
     );
 
-    bluePart.position.y = this.wallHeight / 4;
+    bluePart.position.y = ROOM_SIZE.y / 4;
 
     const whitePart = new THREE.Mesh(
-      new THREE.PlaneGeometry(length, this.wallHeight / 2),
+      new THREE.PlaneGeometry(length, ROOM_SIZE_HALVED.y),
       whiteMaterial,
     );
 
-    whitePart.position.y = (this.wallHeight / 4) * 3;
+    whitePart.position.y = (ROOM_SIZE.y / 4) * 3;
 
     wall.add(bluePart, whitePart);
 
@@ -268,9 +259,9 @@ export class SceneLoader {
       const decalSize = 0.3 + Math.random();
       const decal = await this.getGrimeDecal(decalSize);
       decal.position.set(
-        randomRange(-this.roomLengthHalved + decalSize, this.roomLengthHalved),
-        randomRange(decalSize, this.wallHeight - decalSize),
-        -this.roomWidthHalved + 0.01,
+        randomRange(-ROOM_SIZE_HALVED.x + decalSize, ROOM_SIZE_HALVED.x),
+        randomRange(decalSize, ROOM_SIZE.y - decalSize),
+        -ROOM_SIZE_HALVED.z + 0.01,
       );
       decal.rotateZ(Math.random() * Math.PI);
       this.scene.add(decal);
@@ -282,9 +273,9 @@ export class SceneLoader {
       const decalSize = 0.3 + Math.random();
       const decal = await this.getGrimeDecal(decalSize);
       decal.position.set(
-        randomRange(-this.roomLengthHalved + decalSize, this.roomLengthHalved),
-        randomRange(decalSize, this.wallHeight - decalSize),
-        this.roomWidthHalved - 0.01,
+        randomRange(-ROOM_SIZE_HALVED.x + decalSize, ROOM_SIZE_HALVED.x),
+        randomRange(decalSize, ROOM_SIZE.y - decalSize),
+        ROOM_SIZE_HALVED.z - 0.01,
       );
       decal.rotateY(Math.PI);
       decal.rotateZ(Math.random() * Math.PI);
@@ -297,11 +288,11 @@ export class SceneLoader {
       const decalSize = 0.3 + Math.random();
       const decal = await this.getGrimeDecal(decalSize);
       decal.position.set(
-        -this.roomLengthHalved + 0.01,
-        randomRange(decalSize, this.wallHeight - decalSize),
+        -ROOM_SIZE_HALVED.x + 0.01,
+        randomRange(decalSize, ROOM_SIZE.y - decalSize),
         randomRange(
-          -this.roomWidthHalved + decalSize,
-          this.roomWidthHalved - decalSize,
+          -ROOM_SIZE_HALVED.z + decalSize,
+          ROOM_SIZE_HALVED.z - decalSize,
         ),
       );
       decal.rotateY(Math.PI / 2);
@@ -318,11 +309,11 @@ export class SceneLoader {
       const decalSize = 0.3 + Math.random();
       const decal = await this.getGrimeDecal(decalSize);
       decal.position.set(
-        this.roomLengthHalved - 0.01,
-        randomRange(decalSize, this.wallHeight - decalSize),
+        ROOM_SIZE_HALVED.x - 0.01,
+        randomRange(decalSize, ROOM_SIZE.y - decalSize),
         randomRange(
-          -this.roomWidthHalved + decalSize,
-          this.roomWidthHalved - decalSize,
+          -ROOM_SIZE_HALVED.z + decalSize,
+          ROOM_SIZE_HALVED.z - decalSize,
         ),
       );
       decal.rotateY(-Math.PI / 2);
@@ -351,8 +342,6 @@ export class SceneLoader {
 
     decal.position.y += size / 2;
 
-    //decal.rotateZ(Math.random() * Math.PI);
-
     return decal;
   }
 
@@ -363,10 +352,7 @@ export class SceneLoader {
     };
 
     // Ceiling plane
-    const ceilingGeom = new THREE.PlaneGeometry(
-      this.roomLength,
-      this.roomWidth,
-    );
+    const ceilingGeom = new THREE.PlaneGeometry(ROOM_SIZE.x, ROOM_SIZE.z);
     const ceilingMat = new THREE.MeshStandardMaterial({
       color: 0xf2f2f2,
       roughness: 0.95,
@@ -374,13 +360,13 @@ export class SceneLoader {
     });
     const ceiling = new THREE.Mesh(ceilingGeom, ceilingMat);
     ceiling.rotateX(Math.PI / 2);
-    ceiling.position.y = this.wallHeight;
+    ceiling.position.y = ROOM_SIZE.y;
     this.scene.add(ceiling);
 
     this.addBody(
       createBodyFromProps(
-        { x: 0, y: this.wallHeight + this.minBodyDepth / 2, z: 0 },
-        { x: this.roomLength, y: this.minBodyDepth, z: this.roomWidth },
+        { x: 0, y: ROOM_SIZE.y + this.minBodyDepth / 2, z: 0 },
+        { x: ROOM_SIZE.x, y: this.minBodyDepth, z: ROOM_SIZE.z },
         { type: CANNON.BODY_TYPES.STATIC, material: Game.wallMaterial },
       ),
     );
@@ -397,16 +383,16 @@ export class SceneLoader {
 
     // Length-wise beams
     const beam1 = new THREE.Mesh(
-      new THREE.BoxGeometry(this.roomLength, beamHeight, beamWidth),
+      new THREE.BoxGeometry(ROOM_SIZE.x, beamHeight, beamWidth),
       beamMat,
     );
-    beam1.position.set(0, this.wallHeight, -this.roomWidth / 4);
+    beam1.position.set(0, ROOM_SIZE.y, -ROOM_SIZE.z / 4);
 
     const beam2 = new THREE.Mesh(
-      new THREE.BoxGeometry(this.roomLength, beamHeight, beamWidth),
+      new THREE.BoxGeometry(ROOM_SIZE.x, beamHeight, beamWidth),
       beamMat,
     );
-    beam2.position.set(0, this.wallHeight, this.roomWidth / 4);
+    beam2.position.set(0, ROOM_SIZE.y, ROOM_SIZE.z / 4);
 
     this.scene.add(beam1, beam2);
     this.addBody(createBodyFromMesh(beam1, options));
@@ -415,10 +401,10 @@ export class SceneLoader {
     // Cross beams
     for (let x = -12; x <= 12; x += 4) {
       const beam = new THREE.Mesh(
-        new THREE.BoxGeometry(beamWidth, beamHeight, this.roomWidth),
+        new THREE.BoxGeometry(beamWidth, beamHeight, ROOM_SIZE.z),
         beamMat,
       );
-      beam.position.set(x, this.wallHeight, 0);
+      beam.position.set(x, ROOM_SIZE.y, 0);
       this.scene.add(beam);
       this.addBody(createBodyFromMesh(beam, options));
     }
@@ -480,7 +466,6 @@ export class SceneLoader {
   }
 
   private async setupHoops() {
-    // Todo build hoop base myself
     const loader = new GLTFLoader();
     const url = getUrl("/models/hoop2.glb");
     const gltf = await loader.loadAsync(url);
@@ -494,7 +479,7 @@ export class SceneLoader {
       hoopModel,
       mountDepth,
       {
-        x: -this.roomLengthHalved + mountDepth,
+        x: -ROOM_SIZE_HALVED.x + mountDepth,
         y: hoopHeight,
         z: 0,
       },
@@ -509,7 +494,7 @@ export class SceneLoader {
       hoopModel.clone(true),
       mountDepth,
       {
-        x: this.roomLengthHalved - mountDepth,
+        x: ROOM_SIZE_HALVED.x - mountDepth,
         y: hoopHeight,
         z: 0,
       },
