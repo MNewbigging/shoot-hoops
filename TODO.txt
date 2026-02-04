@@ -1,5 +1,6 @@
 Functionality / fixes:
 - adjust rim bodies; ball seems to hit collider before mesh, too hard to sink
+- I think the start screen is still visible whilst playing
 
 Gameplay:
 - Spacebar bounce
@@ -8,6 +9,7 @@ Gameplay:
 
 Visual:
 - Aiming arc should end with some sort of visual cue to show where ball will hit (circle shader or sth)
+-- render on top or position above to stop z fighting?
 - Hoop net should use cloth physics
 
 UI:

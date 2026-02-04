@@ -2,6 +2,7 @@ import * as CANNON from "cannon-es";
 import * as THREE from "three";
 import { GRAVITY } from "./game";
 import { ROOM_SIZE_HALVED } from "./scene-loader";
+import { HitMarker } from "./hit-marker/hit-marker";
 
 export class Ball {
   body: CANNON.Body;
@@ -25,10 +26,12 @@ export class Ball {
   private readonly maxThrowSpeed = 18; // m/s
 
   private roomColliders: THREE.Plane[] = [];
+  private hitMarker: HitMarker;
 
   private reused = {
     ballWorld: new THREE.Vector3(),
     cameraDir: new THREE.Vector3(),
+    markerDir: new THREE.Vector3(0, 0, 1),
   };
 
   constructor(
@@ -62,22 +65,26 @@ export class Ball {
     // Generate the room colliders
     const floor = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
     const frontWall = new THREE.Plane(
-      new THREE.Vector3(0, 0, 1),
-      -ROOM_SIZE_HALVED.z,
+      new THREE.Vector3(0, 0, -1),
+      ROOM_SIZE_HALVED.z,
     );
     const backWall = new THREE.Plane(
-      new THREE.Vector3(0, 0, -1),
+      new THREE.Vector3(0, 0, 1),
       ROOM_SIZE_HALVED.z,
     );
     const leftWall = new THREE.Plane(
       new THREE.Vector3(1, 0, 0),
-      -ROOM_SIZE_HALVED.x,
+      ROOM_SIZE_HALVED.x,
     );
     const rightWall = new THREE.Plane(
       new THREE.Vector3(-1, 0, 0),
       ROOM_SIZE_HALVED.x,
     );
     this.roomColliders.push(floor, frontWall, backWall, leftWall, rightWall);
+
+    // Hit marker
+    this.hitMarker = new HitMarker();
+    this.scene.add(this.hitMarker);
   }
 
   addListeners() {
@@ -247,6 +254,14 @@ export class Ball {
         if (intersectionPoint) {
           // Rest of the arc should use this position
           usePrevPoint = true;
+          // Update hit marker position
+          this.hitMarker.position.copy(intersectionPoint); // but this is inside walls now...
+          this.hitMarker.quaternion.copy(
+            new THREE.Quaternion().setFromUnitVectors(
+              this.reused.markerDir,
+              collider.normal,
+            ),
+          );
         }
       }
     }
