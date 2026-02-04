@@ -11,3 +11,20 @@
   cursor: pointer;
   font-size: 3vw;
 }
+
+.loading-text {
+  font-size: 2vw;
+  animation: swell 2s infinite ease-in-out;
+}
+
+@keyframes swell {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.4);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
