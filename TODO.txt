@@ -1,4 +1,5 @@
 Functionality / fixes:
+- adjust rim bodies; ball seems to hit collider before mesh, too hard to sink
 
 Gameplay:
 - Spacebar bounce
