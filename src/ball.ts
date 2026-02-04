@@ -1,6 +1,7 @@
 import * as CANNON from "cannon-es";
 import * as THREE from "three";
 import { GRAVITY } from "./game";
+import { ROOM_SIZE_HALVED } from "./scene-loader";
 
 export class Ball {
   body: CANNON.Body;
@@ -114,7 +115,6 @@ export class Ball {
   private updateMesh(dt: number) {
     if (this.held) {
       // Follow camera
-      // todo prevent going through walls
       this.camera.updateMatrixWorld(true);
 
       const targetPos = this.handOffset
@@ -127,6 +127,19 @@ export class Ball {
         .multiplyScalar(dt * this.holdStiffness);
 
       this.mesh.position.add(step);
+
+      // Clamp within room
+      this.mesh.position.x = THREE.MathUtils.clamp(
+        this.mesh.position.x,
+        -ROOM_SIZE_HALVED.x + this.radius,
+        ROOM_SIZE_HALVED.x - this.radius,
+      );
+      this.mesh.position.z = THREE.MathUtils.clamp(
+        this.mesh.position.z,
+        -ROOM_SIZE_HALVED.z + this.radius,
+        ROOM_SIZE_HALVED.z - this.radius,
+      );
+
       this.mesh.quaternion.copy(this.camera.quaternion);
     } else {
       // Follow body
