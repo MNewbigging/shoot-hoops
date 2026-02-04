@@ -33,6 +33,7 @@ export class Ball {
     public mesh: THREE.Group,
     private scene: THREE.Scene,
     private camera: THREE.PerspectiveCamera,
+    private canvas: HTMLElement,
     material: CANNON.Material,
   ) {
     // Physics
@@ -58,9 +59,9 @@ export class Ball {
   }
 
   addListeners() {
-    window.addEventListener("wheel", this.onWheel);
-    window.addEventListener("mousedown", this.onMouseDown);
-    window.addEventListener("mouseup", this.onMouseUp);
+    this.canvas.addEventListener("wheel", this.onWheel);
+    this.canvas.addEventListener("mousedown", this.onMouseDown);
+    this.canvas.addEventListener("mouseup", this.onMouseUp);
   }
 
   hold() {

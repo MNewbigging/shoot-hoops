@@ -4,6 +4,7 @@ import CannonDebugger from "cannon-es-debugger";
 import { PointerLockControls } from "three/examples/jsm/controls/PointerLockControls";
 import { SceneLoader } from "./scene-loader";
 import { Ball } from "./ball";
+import { uiUpdater } from "./ui-updater";
 
 export interface GameKeys {
   w: boolean;
@@ -16,11 +17,14 @@ export interface GameKeys {
 export const GRAVITY = -9.82;
 
 export class Game {
+  paused = false;
+
   private renderer: THREE.WebGLRenderer;
   private camera = new THREE.PerspectiveCamera();
   private scene = new THREE.Scene();
   private clock = new THREE.Clock();
   private controls: PointerLockControls;
+  private updateId = 0;
 
   private loading = false;
 
@@ -57,6 +61,7 @@ export class Game {
       this.camera,
       this.renderer.domElement,
     );
+    this.controls.addEventListener("unlock", this.onControlsUnlock);
 
     // Listeners
     window.addEventListener("resize", this.onCanvasResize);
@@ -93,7 +98,13 @@ export class Game {
     await sceneLoader.loadScene();
 
     const ballMesh = await sceneLoader.loadBall();
-    this.ball = new Ball(ballMesh, this.scene, this.camera, this.ballMaterial);
+    this.ball = new Ball(
+      ballMesh,
+      this.scene,
+      this.camera,
+      this.renderer.domElement,
+      this.ballMaterial,
+    );
     this.ball.body.position.y = 5;
     this.ball.mesh.position.y = 5;
     this.scene.add(this.ball.mesh);
@@ -110,8 +121,23 @@ export class Game {
     this.update();
   }
 
+  pause() {
+    this.paused = true;
+    cancelAnimationFrame(this.updateId);
+    this.clock.stop();
+    uiUpdater.fire("pause-resume");
+  }
+
+  resume() {
+    this.paused = false;
+    uiUpdater.fire("pause-resume");
+    this.controls.lock();
+    this.clock.start();
+    this.update();
+  }
+
   update = () => {
-    requestAnimationFrame(this.update);
+    this.updateId = requestAnimationFrame(this.update);
 
     const dt = this.clock.getDelta();
 
@@ -238,6 +264,10 @@ export class Game {
     );
     this.physicsWorld.addContactMaterial(ballWallMaterial);
   }
+
+  private onControlsUnlock = () => {
+    this.pause();
+  };
 }
 
 export function createBodyFromMesh(

@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { game } from "../game";
 import "./app.scss";
+import { PauseScreen } from "./pause/pause-screen";
+import { useUpdater } from "./use-updater";
 
 export function App() {
+  useUpdater("pause-resume");
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -23,6 +26,7 @@ export function App() {
     <div className="app">
       {!loaded && <LoadingText />}
       {loaded && <StartButton onClick={onStart} />}
+      {game.paused && <PauseScreen />}
     </div>
   );
 }

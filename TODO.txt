@@ -1,10 +1,10 @@
 Functionality / fixes:
-- Ensure ball can never exit room (can do if held and brough outside wall)
 - Ball sometimes clips through hoop backboard when at full speed 
 
 Gameplay:
-- Variable throw speed on holding lmb 
 - Spacebar bounce
+- Tweak throw values so it's easier to land shots
+- Score tracker
 
 Visual:
 - Aiming arc should end with some sort of visual cue to show where ball will hit (circle shader or sth)
@@ -13,9 +13,11 @@ Visual:
 UI:
 - Splash screen; loading status, start button, control scheme
 - Charge meter for throws
+- Pause/resume screen for re-locking controls
 
 SFX:
 - Ball sfx
+- Score sfx (scoreboard beeps?)
 
 Performance:
 - optimise assets

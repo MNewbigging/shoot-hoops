@@ -1,0 +1,21 @@
+.pause-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  .resume-button {
+    cursor: pointer;
+    background-color: white;
+    color: black;
+    padding: 10px;
+    border-radius: 6px;
+
+    &.disabled {
+      cursor: not-allowed;
+    }
+  }
+}
