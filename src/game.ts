@@ -146,9 +146,9 @@ export class Game {
 
     this.ball?.update(dt);
 
-    this.physicsWorld.step(1 / 60, dt, 10);
+    this.physicsWorld.step(1 / 60, dt, 6);
 
-    this.physicsDebugger.update();
+    //this.physicsDebugger.update();
 
     this.renderer.render(this.scene, this.camera);
   };

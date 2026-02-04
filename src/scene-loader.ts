@@ -586,15 +586,24 @@ export class SceneLoader {
     this.addBody(createBodyFromMesh(lowerArmLeft, options));
     this.addBody(createBodyFromMesh(lowerArmRight, options));
 
-    hoopModel.traverse((child) => {
-      if (child.name === "Backboard" && child instanceof THREE.Mesh) {
-        // todo split the backboard in blender so this will work
-        this.addBody(createBodyFromMesh(child, options));
-      }
-      if (child.name === "Rim_frame" && child instanceof THREE.Mesh) {
-        this.addBody(createBodyFromMesh(child, options));
-      }
-    });
+    const rimFrame = hoopModel.getObjectByName("Rim_frame");
+    if (rimFrame) {
+      this.addBody(createBodyFromMesh(rimFrame as THREE.Mesh, options));
+    }
+
+    const backboard = hoopModel.getObjectByName("Backboard");
+    if (backboard) {
+      const size = new THREE.Vector3(this.minBodyDepth, 1.36, 2.04); // using real values logged
+      const depthMod = (Math.sign(pos.x) * this.minBodyDepth) / 2; // yeah gross
+      const adjustedX = pos.x + depthMod;
+      this.addBody(
+        createBodyFromProps(
+          { x: adjustedX, y: pos.y, z: pos.z },
+          size,
+          options,
+        ),
+      );
+    }
 
     // Hoop rims are tricky - they require a ring of spheres
     const rim = hoopModel.getObjectByName("Rim");

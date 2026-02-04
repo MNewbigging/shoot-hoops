@@ -1,5 +1,4 @@
 Functionality / fixes:
-- Ball sometimes clips through hoop backboard when at full speed 
 
 Gameplay:
 - Spacebar bounce
