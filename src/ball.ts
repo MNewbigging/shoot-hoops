@@ -24,6 +24,8 @@ export class Ball {
   private readonly minThrowSpeed = 8; // m/s
   private readonly maxThrowSpeed = 18; // m/s
 
+  private roomColliders: THREE.Plane[] = [];
+
   private reused = {
     ballWorld: new THREE.Vector3(),
     cameraDir: new THREE.Vector3(),
@@ -56,6 +58,26 @@ export class Ball {
     this.throwArc.visible = false;
     this.throwArc.frustumCulled = false;
     this.scene.add(this.throwArc);
+
+    // Generate the room colliders
+    const floor = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const frontWall = new THREE.Plane(
+      new THREE.Vector3(0, 0, 1),
+      -ROOM_SIZE_HALVED.z,
+    );
+    const backWall = new THREE.Plane(
+      new THREE.Vector3(0, 0, -1),
+      ROOM_SIZE_HALVED.z,
+    );
+    const leftWall = new THREE.Plane(
+      new THREE.Vector3(1, 0, 0),
+      -ROOM_SIZE_HALVED.x,
+    );
+    const rightWall = new THREE.Plane(
+      new THREE.Vector3(-1, 0, 0),
+      ROOM_SIZE_HALVED.x,
+    );
+    this.roomColliders.push(floor, frontWall, backWall, leftWall, rightWall);
   }
 
   addListeners() {
@@ -98,7 +120,7 @@ export class Ball {
 
   update(dt: number) {
     this.updateMesh(dt);
-    this.updateThrowArc();
+    this.updateThrowArc(); // todo - limit how often this runs (but not when inputting?)
     this.updateThrowCharge(dt);
   }
 
@@ -189,21 +211,44 @@ export class Ball {
   }
 
   private sampleTrajectoryPoints(
-    startPoint: THREE.Vector3Like,
+    startPoint: THREE.Vector3,
     velocity: THREE.Vector3Like,
     steps: number,
     fixedDt: number,
   ) {
-    const points: THREE.Vector3Like[] = [];
+    const points: THREE.Vector3[] = [];
+    points.push(startPoint);
 
-    for (let i = 0; i < steps; i++) {
+    let usePrevPoint = false; // if intersected something, each new point copies the last
+    for (let i = 1; i < steps; i++) {
       const time = i * fixedDt;
-      const point = {
-        x: startPoint.x + velocity.x * time,
-        y: startPoint.y + velocity.y * time + 0.5 * GRAVITY * time * time,
-        z: startPoint.z + velocity.z * time,
-      };
-      points.push(point);
+
+      const prevPoint = points[i - 1];
+
+      const currentPoint = usePrevPoint
+        ? prevPoint.clone()
+        : new THREE.Vector3(
+            startPoint.x + velocity.x * time,
+            startPoint.y + velocity.y * time + 0.5 * GRAVITY * time * time,
+            startPoint.z + velocity.z * time,
+          );
+
+      points.push(currentPoint);
+
+      if (usePrevPoint) continue; // Already intersected; don't test again
+
+      // Test whether the arc would hit a collider and stop the arc there
+      const line = new THREE.Line3(prevPoint, currentPoint);
+      for (const collider of this.roomColliders) {
+        const intersectionPoint = collider.intersectLine(
+          line,
+          new THREE.Vector3(),
+        );
+        if (intersectionPoint) {
+          // Rest of the arc should use this position
+          usePrevPoint = true;
+        }
+      }
     }
 
     return points;

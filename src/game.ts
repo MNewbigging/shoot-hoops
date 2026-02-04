@@ -100,13 +100,11 @@ export class Game {
       this.ballMaterial,
     );
     this.ball.body.position.y = 5;
-    this.ball.mesh.position.y = 5;
     this.scene.add(this.ball.mesh);
     this.physicsWorld.addBody(this.ball.body);
 
     this.loaded = true;
     uiUpdater.fire("loaded");
-    console.log("fired loaded");
   }
 
   start() {

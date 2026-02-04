@@ -26,7 +26,7 @@ export class SceneLoader {
     await this.setupFloor();
     await this.setupWalls();
     this.setupCeiling();
-    await this.setupHoops();
+    await this.setupHoops(); // todo should this return collision proxies?
   }
 
   async loadBall() {
@@ -46,6 +46,7 @@ export class SceneLoader {
 
     const floorGeom = new THREE.PlaneGeometry(ROOM_SIZE.x, ROOM_SIZE.z);
     const floor = new THREE.Mesh(floorGeom, floorMat);
+    floor.name = "floor";
     floor.rotateX(-Math.PI / 2);
     this.scene.add(floor);
 
@@ -591,19 +592,17 @@ export class SceneLoader {
       this.addBody(createBodyFromMesh(rimFrame as THREE.Mesh, options));
     }
 
-    const backboard = hoopModel.getObjectByName("Backboard");
-    if (backboard) {
-      const size = new THREE.Vector3(this.minBodyDepth, 1.36, 2.04); // using real values logged
-      const depthMod = (Math.sign(pos.x) * this.minBodyDepth) / 2; // yeah gross
-      const adjustedX = pos.x + depthMod;
-      this.addBody(
-        createBodyFromProps(
-          { x: adjustedX, y: pos.y, z: pos.z },
-          size,
-          options,
-        ),
-      );
-    }
+    // Backboard physics body
+    const size = new THREE.Vector3(this.minBodyDepth, 1.36, 2.04); // using real values logged
+    const depthMod = (Math.sign(pos.x) * this.minBodyDepth) / 2; // yeah gross
+    const adjustedPos = new THREE.Vector3(pos.x + depthMod, pos.y, pos.z);
+    this.addBody(createBodyFromProps(adjustedPos, size, options));
+
+    // Backboard collider
+    const backboardCollider = new THREE.Box3().setFromCenterAndSize(
+      adjustedPos,
+      size,
+    );
 
     // Hoop rims are tricky - they require a ring of spheres
     const rim = hoopModel.getObjectByName("Rim");
