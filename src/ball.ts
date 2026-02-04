@@ -5,18 +5,23 @@ import { GRAVITY } from "./game";
 export class Ball {
   body: CANNON.Body;
   held = false;
-  throwSpeed = 12;
 
   private readonly radius = 0.15;
-  private handOffset = new THREE.Vector3(0.25, 0, -1);
-  private holdStiffness = 15;
+  private readonly handOffset = new THREE.Vector3(0.25, 0, -1);
+  private readonly holdStiffness = 15;
 
   private ballHelper: THREE.Points;
-  private ballHelperPoints = 60;
+  private readonly ballHelperPoints = 60;
 
   private throwPitch = 0; // radians
-  private minThrowPitch = -0.3;
-  private maxThrowPitch = 0.6;
+  private readonly minThrowPitch = -0.3;
+  private readonly maxThrowPitch = 0.6;
+
+  private chargingThrow = false;
+  private throwCharge = 0; // 0 -> 1
+  private readonly chargeTime = 0.8; // seconds to reach full power
+  private readonly minThrowSpeed = 8; // m/s
+  private readonly maxThrowSpeed = 18; // m/s
 
   private reused = {
     ballWorld: new THREE.Vector3(),
@@ -49,9 +54,12 @@ export class Ball {
     this.ballHelper.visible = false;
     this.ballHelper.frustumCulled = false;
     this.scene.add(this.ballHelper);
+  }
 
-    // Listeners
+  addListeners() {
     window.addEventListener("wheel", this.onWheel);
+    window.addEventListener("mousedown", this.onMouseDown);
+    window.addEventListener("mouseup", this.onMouseUp);
   }
 
   hold() {
@@ -63,7 +71,7 @@ export class Ball {
     this.held = true;
   }
 
-  throw() {
+  throw(throwSpeed: number) {
     this.body.wakeUp();
     this.body.collisionFilterMask = -1; // collide with everything
 
@@ -78,9 +86,9 @@ export class Ball {
 
     // Add velocity for throw
     this.body.velocity.set(
-      direction.x * this.throwSpeed,
-      direction.y * this.throwSpeed,
-      direction.z * this.throwSpeed,
+      direction.x * throwSpeed,
+      direction.y * throwSpeed,
+      direction.z * throwSpeed,
     );
 
     this.held = false;
@@ -89,6 +97,7 @@ export class Ball {
   update(dt: number) {
     this.updateMesh(dt);
     this.updateBallHelper();
+    this.updateThrowCharge(dt);
   }
 
   private getThrowDirection() {
@@ -135,11 +144,12 @@ export class Ball {
 
     this.ballHelper.visible = true;
 
+    // todo add something that shows where it'll hit
     const startPos = this.mesh.getWorldPosition(this.reused.ballWorld);
     const direction = this.getThrowDirection();
-    const velocity = direction.multiplyScalar(this.throwSpeed);
+    const velocity = direction.multiplyScalar(this.getThrowSpeed());
     const dt = 1 / 30; // Bigger number = bigger gap between points
-    const steps = 60; // How many point positions to sample
+    const steps = this.ballHelperPoints; // How many point positions to sample
     const points = this.sampleTrajectoryPoints(startPos, velocity, steps, dt);
     const posAttr = this.ballHelper.geometry.getAttribute(
       "position",
@@ -151,6 +161,18 @@ export class Ball {
       posAttr.setXYZ(i, p.x, p.y, p.z);
     }
     posAttr.needsUpdate = true;
+  }
+
+  private updateThrowCharge(dt: number) {
+    if (this.chargingThrow) {
+      this.throwCharge = Math.min(1, this.throwCharge + dt / this.chargeTime);
+    }
+  }
+
+  private getThrowSpeed() {
+    // Ease in rather than linear
+    const t = this.throwCharge * this.throwCharge;
+    return this.minThrowSpeed + (this.maxThrowSpeed - this.minThrowSpeed) * t;
   }
 
   private sampleTrajectoryPoints(
@@ -185,5 +207,22 @@ export class Ball {
       this.minThrowPitch,
       this.maxThrowPitch,
     );
+  };
+
+  private onMouseDown = (e: MouseEvent) => {
+    if (e.button === 0) {
+      this.chargingThrow = true;
+    }
+  };
+
+  private onMouseUp = (e: MouseEvent) => {
+    if (e.button !== 0) return;
+    this.chargingThrow = false;
+
+    if (!this.held) return;
+
+    const throwSpeed = this.getThrowSpeed();
+    this.throw(throwSpeed);
+    this.throwCharge = 0; // reset after throw
   };
 }

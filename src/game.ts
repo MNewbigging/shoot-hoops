@@ -105,6 +105,7 @@ export class Game {
   start() {
     document.body.appendChild(this.renderer.domElement);
     this.onCanvasResize();
+    this.ball?.addListeners();
     this.controls.lock();
     this.update();
   }
@@ -153,16 +154,10 @@ export class Game {
 
   private onMouseDown = (e: MouseEvent) => {
     if (e.button === 2) this.keys.rmb = true;
-    if (e.button !== 0) return;
-    // todo track time started
   };
 
   private onMouseUp = (e: MouseEvent) => {
     if (e.button === 2) this.keys.rmb = false;
-    if (e.button !== 0) return;
-    if (!this.ball?.held) return;
-
-    this.ball.throw();
   };
 
   private setupLights() {
