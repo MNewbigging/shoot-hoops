@@ -11,8 +11,8 @@ export class Ball {
   private readonly handOffset = new THREE.Vector3(0.25, 0, -1);
   private readonly holdStiffness = 15;
 
-  private ballHelper: THREE.Points;
-  private readonly ballHelperPoints = 60;
+  private throwArc: THREE.Points;
+  private readonly throwArcPoints = 60;
 
   private throwPitch = 0; // radians
   private readonly minThrowPitch = -0.3;
@@ -47,15 +47,15 @@ export class Ball {
     const helperGeometry = new THREE.BufferGeometry();
     helperGeometry.setAttribute(
       "position",
-      new THREE.BufferAttribute(new Float32Array(this.ballHelperPoints * 3), 3),
+      new THREE.BufferAttribute(new Float32Array(this.throwArcPoints * 3), 3),
     );
-    this.ballHelper = new THREE.Points(
+    this.throwArc = new THREE.Points(
       helperGeometry,
       new THREE.PointsMaterial({ size: 0.04, sizeAttenuation: true }),
     );
-    this.ballHelper.visible = false;
-    this.ballHelper.frustumCulled = false;
-    this.scene.add(this.ballHelper);
+    this.throwArc.visible = false;
+    this.throwArc.frustumCulled = false;
+    this.scene.add(this.throwArc);
   }
 
   addListeners() {
@@ -98,7 +98,7 @@ export class Ball {
 
   update(dt: number) {
     this.updateMesh(dt);
-    this.updateBallHelper();
+    this.updateThrowArc();
     this.updateThrowCharge(dt);
   }
 
@@ -149,27 +149,26 @@ export class Ball {
     }
   }
 
-  private updateBallHelper() {
+  private updateThrowArc() {
     // Only show when holding the ball
     if (!this.held) {
-      this.ballHelper.visible = false;
+      this.throwArc.visible = false;
       return;
     }
 
-    this.ballHelper.visible = true;
+    this.throwArc.visible = true;
 
-    // todo add something that shows where it'll hit
     const startPos = this.mesh.getWorldPosition(this.reused.ballWorld);
     const direction = this.getThrowDirection();
     const velocity = direction.multiplyScalar(this.getThrowSpeed());
     const dt = 1 / 30; // Bigger number = bigger gap between points
-    const steps = this.ballHelperPoints; // How many point positions to sample
+    const steps = this.throwArcPoints; // How many point positions to sample
     const points = this.sampleTrajectoryPoints(startPos, velocity, steps, dt);
-    const posAttr = this.ballHelper.geometry.getAttribute(
+    const posAttr = this.throwArc.geometry.getAttribute(
       "position",
     ) as THREE.BufferAttribute;
     // Iterate over all points in the helper
-    for (let i = 0; i < this.ballHelperPoints; i++) {
+    for (let i = 0; i < this.throwArcPoints; i++) {
       // Assign a sampled position if it exists, or stack on last point if not
       const p = points[i] ?? points[points.length - 1];
       posAttr.setXYZ(i, p.x, p.y, p.z);

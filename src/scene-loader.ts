@@ -673,9 +673,3 @@ function randomRangeInt(min: number, max: number) {
   const result = Math.floor(randomRange(min, max));
   return result;
 }
-
-/**
- * For static objects:
- * - build, place and rotate objects first
- * - then make the physics body for it
- */
