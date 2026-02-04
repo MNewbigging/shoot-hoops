@@ -1,4 +1,4 @@
-export type UiUpdaterEvents = "pause-resume";
+export type UiUpdaterEvents = "loaded" | "started" | "pause-resume";
 
 type Callback = () => void;
 

@@ -17,6 +17,8 @@ export interface GameKeys {
 export const GRAVITY = -9.82;
 
 export class Game {
+  loaded = false;
+  started = false;
   paused = false;
 
   private renderer: THREE.WebGLRenderer;
@@ -25,8 +27,6 @@ export class Game {
   private clock = new THREE.Clock();
   private controls: PointerLockControls;
   private updateId = 0;
-
-  private loading = false;
 
   private physicsWorld: CANNON.World;
   private ballMaterial = new CANNON.Material("ball");
@@ -82,13 +82,7 @@ export class Game {
     this.setupPhysics();
   }
 
-  async load(onComplete: () => void) {
-    if (this.loading) {
-      return;
-    }
-
-    this.loading = true;
-
+  async load() {
     const sceneLoader = new SceneLoader(
       this.scene,
       this.renderer,
@@ -110,7 +104,9 @@ export class Game {
     this.scene.add(this.ball.mesh);
     this.physicsWorld.addBody(this.ball.body);
 
-    onComplete();
+    this.loaded = true;
+    uiUpdater.fire("loaded");
+    console.log("fired loaded");
   }
 
   start() {
@@ -118,6 +114,7 @@ export class Game {
     this.onCanvasResize();
     this.ball?.addListeners();
     this.controls.lock();
+    uiUpdater.fire("started");
     this.update();
   }
 
@@ -342,3 +339,4 @@ export function createBodyFromProps(
 }
 
 export const game = new Game();
+game.load();
