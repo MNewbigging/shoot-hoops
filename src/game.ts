@@ -112,6 +112,7 @@ export class Game {
     this.onCanvasResize();
     this.ball?.addListeners();
     this.controls.lock();
+    this.started = true;
     uiUpdater.fire("started");
     this.update();
   }
