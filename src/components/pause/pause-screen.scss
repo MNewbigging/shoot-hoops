@@ -8,14 +8,25 @@
   align-items: center;
 
   .resume-button {
+    letter-spacing: 2px;
+    font-size: 1.5rem;
+    padding: 16px 32px;
+    border-radius: 12px;
+    border: none;
+    background: #ff7a00;
+    color: white;
     cursor: pointer;
-    background-color: white;
-    color: black;
-    padding: 10px;
-    border-radius: 6px;
+    box-shadow: 0 8px 0 #d65f00;
+    transition:
+      transform 0.1s,
+      box-shadow 0.1s;
 
     &.disabled {
-      cursor: not-allowed;
+      color: rgba(255, 255, 255, 0.507);
+      cursor: wait;
+      background: #ff7b0073;
+      transform: translateY(6px);
+      box-shadow: 0 2px 0 #d65f00;
     }
   }
 }

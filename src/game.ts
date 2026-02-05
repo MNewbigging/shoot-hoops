@@ -99,7 +99,7 @@ export class Game {
       this.renderer.domElement,
       this.ballMaterial,
     );
-    this.ball.body.position.y = 5;
+    this.ball.body.position.y = 3;
     this.scene.add(this.ball.mesh);
     this.physicsWorld.addBody(this.ball.body);
 
@@ -144,7 +144,7 @@ export class Game {
 
     this.physicsWorld.step(1 / 60, dt, 6);
 
-    //this.physicsDebugger.update();
+    // this.physicsDebugger.update();
 
     this.renderer.render(this.scene, this.camera);
   };

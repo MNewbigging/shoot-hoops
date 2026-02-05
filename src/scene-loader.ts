@@ -598,12 +598,6 @@ export class SceneLoader {
     const adjustedPos = new THREE.Vector3(pos.x + depthMod, pos.y, pos.z);
     this.addBody(createBodyFromProps(adjustedPos, size, options));
 
-    // Backboard collider
-    const backboardCollider = new THREE.Box3().setFromCenterAndSize(
-      adjustedPos,
-      size,
-    );
-
     // Hoop rims are tricky - they require a ring of spheres
     const rim = hoopModel.getObjectByName("Rim");
     if (rim) {
@@ -616,7 +610,7 @@ export class SceneLoader {
 
   private makeRimBodies(center: THREE.Vector3) {
     const rimRadius = 0.25;
-    const tubeRadius = 0.01;
+    const tubeRadius = 0.0075;
     const sphereCount = 40;
 
     const body = new CANNON.Body({
