@@ -1,4 +1,5 @@
 import { game } from "../../game";
+import { Controls } from "../controls/controls";
 import { useUpdater } from "../use-updater";
 import "./splash-screen.scss";
 
@@ -9,14 +10,7 @@ export function SplashScreen() {
     <div className="splash-screen">
       <div className="title">🏀 Shoot Hoops 🏀</div>
 
-      <div className="controls">
-        <div>WASD - Move</div>
-        <div>Mouse - Look</div>
-        <div>LMB - Throw</div>
-        <div>RMB - Pickup</div>
-        <div>Wheel - Arc</div>
-        <div>Tip: Hold LMB to charge</div>
-      </div>
+      <Controls />
 
       {!game.loaded && <LoadingText />}
       {game.loaded && <StartButton onClick={() => game.start()} />}

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { game } from "../../game";
 import { useUpdater } from "../use-updater";
 import "./pause-screen.scss";
+import { Controls } from "../controls/controls";
 
 export function PauseScreen() {
   useUpdater("pause-resume");
@@ -22,15 +23,19 @@ export function PauseScreen() {
 
   return (
     <div className="pause-screen">
-      <div
-        className={resumeClasses.join(" ")}
-        onClick={(e) => {
-          if (!canResume) return;
-          e.stopPropagation();
-          game.resume();
-        }}
-      >
-        RESUME
+      <div className="pause-screen-content">
+        <Controls />
+
+        <div
+          className={resumeClasses.join(" ")}
+          onClick={(e) => {
+            if (!canResume) return;
+            e.stopPropagation();
+            game.resume();
+          }}
+        >
+          RESUME
+        </div>
       </div>
     </div>
   );

@@ -2,10 +2,34 @@
   position: fixed;
   inset: 0;
   z-index: 100;
+}
+
+.pause-screen::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+}
+.pause-screen-content {
+  position: fixed;
+  inset: 0;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 260px;
+  height: 330px;
+  z-index: 100;
+  border-radius: 20px;
+
+  background-color: #f4f4f4;
+  background-image: radial-gradient(#00000010 1px, transparent 1px);
+  background-size: 4px 4px;
 
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
+  gap: 20px;
 
   .resume-button {
     letter-spacing: 2px;
