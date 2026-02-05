@@ -26,12 +26,15 @@ export class Ball {
   private readonly maxThrowSpeed = 18; // m/s
 
   private roomColliders: THREE.Plane[] = [];
+  private backboardColliders: THREE.Box3[] = [];
   private hitMarker: HitMarker;
 
   private reused = {
     ballWorld: new THREE.Vector3(),
     cameraDir: new THREE.Vector3(),
     markerDir: new THREE.Vector3(0, 0, 1),
+    intersectionPoint: new THREE.Vector3(),
+    markerRot: new THREE.Quaternion(),
   };
 
   constructor(
@@ -81,6 +84,14 @@ export class Ball {
       ROOM_SIZE_HALVED.x,
     );
     this.roomColliders.push(floor, frontWall, backWall, leftWall, rightWall);
+
+    // Hoop backboard colliders
+    this.scene.traverse((child) => {
+      if (child.name === "Backboard") {
+        const box = new THREE.Box3().setFromObject(child);
+        this.backboardColliders.push(box);
+      }
+    });
 
     // Hit marker
     this.hitMarker = new HitMarker();
@@ -183,6 +194,7 @@ export class Ball {
     // Only show when holding the ball
     if (!this.held) {
       this.throwArc.visible = false;
+      this.hitMarker.visible = false;
       return;
     }
 
@@ -233,6 +245,7 @@ export class Ball {
 
       const prevPoint = points[i - 1];
 
+      // Work out the next step given velocity and time in future
       const currentPoint = new THREE.Vector3(
         startPoint.x + velocity.x * time,
         startPoint.y + velocity.y * time + 0.5 * GRAVITY * time * time,
@@ -242,34 +255,96 @@ export class Ball {
       points.push(currentPoint);
 
       // Test whether the arc would hit a collider and stop the arc there
-      const line = new THREE.Line3(prevPoint, currentPoint);
-      for (const collider of this.roomColliders) {
-        const intersectionPoint = collider.intersectLine(
-          line,
-          new THREE.Vector3(),
-        );
-        if (intersectionPoint) {
-          // Update hit marker position to just above area hit
-          const adjustedPoint = intersectionPoint
-            .clone()
-            .add(collider.normal.clone().multiplyScalar(0.01));
-          this.hitMarker.position.copy(adjustedPoint);
 
-          // Rotate in line with collider normal
-          this.hitMarker.quaternion.copy(
-            new THREE.Quaternion().setFromUnitVectors(
-              this.reused.markerDir,
-              collider.normal,
-            ),
-          );
-          this.hitMarker.visible = true;
-          return points; // exit early
-        }
+      // Backboards
+      if (this.hitBackboardCollider(prevPoint, currentPoint)) {
+        return points;
+      }
+
+      // Room
+      if (this.hitRoomCollider(prevPoint, currentPoint)) {
+        return points;
       }
     }
 
-    this.hitMarker.visible = false;
     return points;
+  }
+
+  private hitRoomCollider(startPoint: THREE.Vector3, endPoint: THREE.Vector3) {
+    // Make a line between the points
+    const line = new THREE.Line3(startPoint, endPoint);
+
+    for (const collider of this.roomColliders) {
+      // Get any intersection
+      const intersectionPoint = collider.intersectLine(
+        line,
+        this.reused.intersectionPoint,
+      );
+      if (!intersectionPoint) continue;
+
+      // Update hit marker position to just above area hit
+      const adjustedPoint = intersectionPoint
+        .clone()
+        .add(collider.normal.clone().multiplyScalar(0.01));
+      this.hitMarker.position.copy(adjustedPoint);
+
+      // Rotate in line with collider normal
+      this.hitMarker.quaternion.copy(
+        this.reused.markerRot.setFromUnitVectors(
+          this.reused.markerDir,
+          collider.normal,
+        ),
+      );
+
+      // Update marker and return
+      this.hitMarker.visible = true;
+      return true;
+    }
+
+    return false;
+  }
+
+  private hitBackboardCollider(
+    startPoint: THREE.Vector3,
+    endPoint: THREE.Vector3,
+  ) {
+    // Intersecting against a box3 instead of plane so need slightly differnet method with a ray
+    const startToEnd = endPoint.clone().sub(startPoint);
+    const length = startToEnd.length();
+    const ray = new THREE.Ray(startPoint, startToEnd.normalize());
+
+    for (const backboard of this.backboardColliders) {
+      // Test intersection
+      const intersectionPoint = ray.intersectBox(
+        backboard,
+        this.reused.intersectionPoint,
+      );
+      if (!intersectionPoint) continue;
+
+      // But ensure it's within the limits
+      if (startPoint.distanceTo(intersectionPoint) > length) continue;
+
+      // Work out normal - either +- on X
+      const xNormal = -Math.sign(intersectionPoint.x);
+      const normal = new THREE.Vector3(xNormal, 0, 0);
+
+      // Rotate
+      this.hitMarker.quaternion.copy(
+        this.reused.markerRot.setFromUnitVectors(this.reused.markerDir, normal),
+      );
+
+      // Update position
+      const adjsutedPoint = intersectionPoint
+        .clone()
+        .add(normal.clone().multiplyScalar(0.01));
+      this.hitMarker.position.copy(adjsutedPoint);
+
+      // Update marker and return
+      this.hitMarker.visible = true;
+      return true;
+    }
+
+    return false;
   }
 
   private onWheel = (e: WheelEvent) => {
@@ -300,7 +375,5 @@ export class Ball {
     const throwSpeed = this.getThrowSpeed();
     this.throw(throwSpeed);
     this.throwCharge = 0; // reset after throw
-
-    this.hitMarker.visible = false;
   };
 }
