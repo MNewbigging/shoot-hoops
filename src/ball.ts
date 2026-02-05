@@ -85,6 +85,7 @@ export class Ball {
     // Hit marker
     this.hitMarker = new HitMarker();
     this.scene.add(this.hitMarker);
+    this.hitMarker.visible = false;
   }
 
   addListeners() {
@@ -226,23 +227,18 @@ export class Ball {
     const points: THREE.Vector3[] = [];
     points.push(startPoint);
 
-    let usePrevPoint = false; // if intersected something, each new point copies the last
     for (let i = 1; i < steps; i++) {
       const time = i * fixedDt;
 
       const prevPoint = points[i - 1];
 
-      const currentPoint = usePrevPoint
-        ? prevPoint.clone()
-        : new THREE.Vector3(
-            startPoint.x + velocity.x * time,
-            startPoint.y + velocity.y * time + 0.5 * GRAVITY * time * time,
-            startPoint.z + velocity.z * time,
-          );
+      const currentPoint = new THREE.Vector3(
+        startPoint.x + velocity.x * time,
+        startPoint.y + velocity.y * time + 0.5 * GRAVITY * time * time,
+        startPoint.z + velocity.z * time,
+      );
 
       points.push(currentPoint);
-
-      if (usePrevPoint) continue; // Already intersected; don't test again
 
       // Test whether the arc would hit a collider and stop the arc there
       const line = new THREE.Line3(prevPoint, currentPoint);
@@ -252,8 +248,6 @@ export class Ball {
           new THREE.Vector3(),
         );
         if (intersectionPoint) {
-          // Rest of the arc should use this position
-          usePrevPoint = true;
           // Update hit marker position
           this.hitMarker.position.copy(intersectionPoint); // but this is inside walls now...
           this.hitMarker.quaternion.copy(
@@ -262,10 +256,13 @@ export class Ball {
               collider.normal,
             ),
           );
+          this.hitMarker.visible = true;
+          return points; // exit early
         }
       }
     }
 
+    this.hitMarker.visible = false;
     return points;
   }
 
@@ -297,5 +294,7 @@ export class Ball {
     const throwSpeed = this.getThrowSpeed();
     this.throw(throwSpeed);
     this.throwCharge = 0; // reset after throw
+
+    this.hitMarker.visible = false;
   };
 }
