@@ -1,18 +1,16 @@
 Functionality / fixes:
-- adjust rim bodies; ball seems to hit collider before mesh, too hard to sink
-
+- limit ball spin
+- general jittery movement of the ball when held or thrown
 
 Gameplay:
-- Spacebar bounce
 - Score tracker
 
 Visual:
-- Hoop net should use cloth physics
+- Hoop net should use cloth physics (this looks painful to implement)
 
 UI:
-- Splash screen; loading status, start button, control scheme
 - Charge meter for throws
-- Pause/resume screen for re-locking controls
+
 
 SFX:
 - Ball sfx

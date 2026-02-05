@@ -7,12 +7,14 @@ import {
   Game,
   createBodyFromProps,
 } from "./game";
+import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader";
 
 export const ROOM_SIZE = new THREE.Vector3(28, 8, 15);
 export const ROOM_SIZE_HALVED = ROOM_SIZE.clone().multiplyScalar(0.5);
 
 export class SceneLoader {
   private textureLoader = new THREE.TextureLoader();
+  private ktx2Loader = new KTX2Loader();
 
   private readonly minBodyDepth = 0.3;
 
@@ -20,7 +22,9 @@ export class SceneLoader {
     private scene: THREE.Scene,
     private renderer: THREE.WebGLRenderer,
     private addBody: (body: CANNON.Body | null) => void,
-  ) {}
+  ) {
+    this.ktx2Loader.detectSupport(this.renderer);
+  }
 
   async loadScene() {
     await this.setupFloor();
@@ -31,7 +35,7 @@ export class SceneLoader {
 
   async loadBall() {
     const loader = new GLTFLoader();
-    const url = getUrl("/models/basketball_ball.glb");
+    const url = getUrl("/models/basketball.glb");
     const ball = await loader.loadAsync(url);
     return ball.scene;
   }
@@ -468,7 +472,7 @@ export class SceneLoader {
 
   private async setupHoops() {
     const loader = new GLTFLoader();
-    const url = getUrl("/models/hoop2.glb");
+    const url = getUrl("/models/hoop.glb");
     const gltf = await loader.loadAsync(url);
     const hoopModel = gltf.scene;
     hoopModel.scale.multiplyScalar(0.015);
@@ -633,7 +637,10 @@ export class SceneLoader {
 
   private async loadTexture(path: string) {
     const url = getUrl(path);
-    const texture = await this.textureLoader.loadAsync(url);
+
+    const texture = path.includes("ktx2")
+      ? await this.ktx2Loader.loadAsync(url)
+      : await this.textureLoader.loadAsync(url);
 
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
