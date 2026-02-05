@@ -191,6 +191,7 @@ export class Ball {
     const startPos = this.mesh.getWorldPosition(this.reused.ballWorld);
     const direction = this.getThrowDirection();
     const velocity = direction.multiplyScalar(this.getThrowSpeed());
+
     const dt = 1 / 30; // Bigger number = bigger gap between points
     const steps = this.throwArcPoints; // How many point positions to sample
     const points = this.sampleTrajectoryPoints(startPos, velocity, steps, dt);
@@ -248,8 +249,13 @@ export class Ball {
           new THREE.Vector3(),
         );
         if (intersectionPoint) {
-          // Update hit marker position
-          this.hitMarker.position.copy(intersectionPoint); // but this is inside walls now...
+          // Update hit marker position to just above area hit
+          const adjustedPoint = intersectionPoint
+            .clone()
+            .add(collider.normal.clone().multiplyScalar(0.01));
+          this.hitMarker.position.copy(adjustedPoint);
+
+          // Rotate in line with collider normal
           this.hitMarker.quaternion.copy(
             new THREE.Quaternion().setFromUnitVectors(
               this.reused.markerDir,
