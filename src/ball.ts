@@ -17,7 +17,7 @@ export class Ball {
 
   private throwPitch = 0; // radians
   private readonly minThrowPitch = -0.3;
-  private readonly maxThrowPitch = 0.6;
+  private readonly maxThrowPitch = 1;
 
   private chargingThrow = false;
   private throwCharge = 0; // 0 -> 1
@@ -49,6 +49,8 @@ export class Ball {
       mass: 1,
       shape: new CANNON.Sphere(this.radius),
       material,
+      linearDamping: 0.12,
+      angularDamping: 0.15,
     });
 
     // Ball helper
