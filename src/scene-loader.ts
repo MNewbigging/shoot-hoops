@@ -41,7 +41,9 @@ export class SceneLoader {
   }
 
   private async setupFloor() {
-    const floorTexture = await this.loadTexture("/textures/gym_floor.png");
+    const floorTexture = await this.loadTexture(
+      "/textures/gym_floor_small.png",
+    );
     const floorMat = new THREE.MeshPhysicalMaterial({
       map: floorTexture,
       roughness: 0.45,
@@ -181,9 +183,11 @@ export class SceneLoader {
 
   private async buildWall(length: number) {
     // Get new textures because repeat differs per side/end wall
-    const whiteTexture = await this.loadTexture("/textures/wall_white.png");
-    const blueTexture = await this.loadTexture("/textures/wall_blue.png");
-    const normal = await this.loadTexture("/textures/wall_normal.png");
+    const whiteTexture = await this.loadTexture(
+      "/textures/wall_white_small.png",
+    );
+    const blueTexture = await this.loadTexture("/textures/wall_blue_small.png");
+    const normal = await this.loadTexture("/textures/wall_normal_small.png");
 
     const repeat = new THREE.Vector2(length / 2, ROOM_SIZE.y / 4); // 2 rows so divide by 4
     whiteTexture.repeat.copy(repeat);
@@ -230,8 +234,8 @@ export class SceneLoader {
   }
 
   private async buildDoor() {
-    const map = await this.loadTexture("/textures/door_albedo.png");
-    const normalMap = await this.loadTexture("/textures/door_normal.png");
+    const map = await this.loadTexture("/textures/door_albedo_small.png");
+    const normalMap = await this.loadTexture("/textures/door_normal_small.png");
 
     const mat = new THREE.MeshStandardMaterial({
       map,
@@ -331,7 +335,7 @@ export class SceneLoader {
   }
 
   private async getGrimeDecal(size: number) {
-    const grimeToUse = Math.random() < 0.5 ? "grime_1" : "grime_2";
+    const grimeToUse = Math.random() < 0.5 ? "grime_1_small" : "grime_2_small";
     const map = await this.loadTexture(`/textures/${grimeToUse}.png`);
 
     const grimeMat = new THREE.MeshStandardMaterial({
